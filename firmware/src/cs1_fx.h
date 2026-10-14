@@ -13,21 +13,45 @@
 static int16_t dly_line[DLY_LEN] FM1_POOL;
 static uint32_t dly_w;                               /* the write index, wrapped by a compare (no modulo: the chip has no divider) */
 static int32_t dly_lp;
+static uint32_t dly_wow, dly_flt;                    /* the tape's wow (0.7 Hz) and flutter (6 Hz) phases */
+static int32_t dly_m16, dly_m16_d;                   /* the tape's wander, in 1/16 frames, and its step a frame across the block */
 static inline uint32_t dly_back(uint32_t back) { uint32_t p = dly_w + DLY_LEN - back; return p >= DLY_LEN ? p - DLY_LEN : p; }
 static void fx_delay(int32_t *st, uint32_t n)       /* st: L R L R ..., in place */
 {
     uint32_t i, time = patch.dly_sync ? sync_dly : DLY_TIME[patch.dly_time], half = time >> 1;
     int32_t fb = patch.dly_fb * 250, mix = patch.dly_mix * 258, damp = 32767 - patch.dly_damp * 230;
+    int32_t tape = patch.dly_tape, drive = 32767 + tape * 258, m16;
+    if (tape) {                                     /* TAPE: the repeats wander (wow and flutter), darken and saturate */
+        int32_t target;
+        damp -= tape * 120;
+        dly_wow += 68173u * n; dly_flt += 584000u * n;   /* 0.7 Hz and 6 Hz, stepped a block */
+        target = ((sine_i(dly_wow) * 40 + sine_i(dly_flt) * 6) >> 15) * tape / 127 * 16;   /* +-46 frames (1 ms) at full, in 1/16 */
+        dly_m16_d = (target - dly_m16) / (int32_t)n;
+    } else dly_m16 = dly_m16_d = 0;
+    if (damp < 4000) damp = 4000;
     if (!mix) {                                     /* off: the line keeps filling, so turning MIX up finds a tail */
         for (i = 0; i < n; i++) { dly_line[dly_w] = (int16_t)clamp((st[2u * i] + st[2u * i + 1u]) >> 1, -32767, 32767); if (++dly_w == DLY_LEN) dly_w = 0; }
         return;
     }
     for (i = 0; i < n; i++) {
         int32_t in = (st[2u * i] + st[2u * i + 1u]) >> 1;
-        int32_t tap = dly_line[dly_back(time)];
-        int32_t tap2 = patch.dly_ping ? dly_line[dly_back(half)] : tap;
-        dly_lp += mulq15(tap - dly_lp, damp);       /* the loop's damping */
-        dly_line[dly_w] = (int16_t)clamp(in + mulq15(dly_lp, fb), -32767, 32767);
+        int32_t tap, tap2, back;
+        if (tape) {                                 /* read between frames at the wandering position */
+            uint32_t fr = (uint32_t)(dly_m16 + 32 * 16) & 15u, a, b;
+            dly_m16 += dly_m16_d; m16 = dly_m16 + 32 * 16;   /* kept positive */
+            back = (int32_t)time + (m16 >> 4) - 32;
+            a = dly_back((uint32_t)back); b = dly_back((uint32_t)back + 1u);
+            tap = dly_line[a] + (((dly_line[b] - dly_line[a]) * (int32_t)fr) >> 4);
+            if (patch.dly_ping) { a = dly_back((uint32_t)half + (m16 >> 4) - 32); b = dly_back((uint32_t)half + (m16 >> 4) - 31); tap2 = dly_line[a] + (((dly_line[b] - dly_line[a]) * (int32_t)fr) >> 4); }
+            else tap2 = tap;
+        } else {
+            tap = dly_line[dly_back(time)];
+            tap2 = patch.dly_ping ? dly_line[dly_back(half)] : tap;
+        }
+        dly_lp += mulq15r(tap - dly_lp, damp);      /* the loop's damping (rounded: no DC limit cycle) */
+        { int32_t f = mulq15r(dly_lp, fb);
+          if (tape) f = softclip(mulq15(f, drive)) - mulq15(softclip(mulq15(f, drive)), tape * 100);   /* saturates, then a little less level */
+          dly_line[dly_w] = (int16_t)clamp(in + f, -32767, 32767); }
         if (++dly_w == DLY_LEN) dly_w = 0;
         st[2u * i] += mulq15(tap, mix);
         st[2u * i + 1u] += mulq15(tap2, mix);
@@ -35,6 +59,36 @@ static void fx_delay(int32_t *st, uint32_t n)       /* st: L R L R ..., in place
 }
 
 /* ---- the reverb */
+/* ---- the phaser: six first-order allpasses a side swept by one LFO (the right side a quarter turn behind), feedback
+ * round the chain, dry and wet summed. The sweep's coefficient comes from PH_A (100 Hz .. 5 kHz) once a block and
+ * slides across it. After the delay, before the reverb. */
+static int32_t ph_x[2][6], ph_y[2][6], ph_last[2], ph_a[2], ph_a_d[2];
+static uint32_t ph_lfo;
+static void fx_phaser(int32_t *st, uint32_t n)
+{
+    uint32_t i, k, c;
+    int32_t mix = patch.ph_mix * 258, fb = patch.ph_fb * 180, depth = patch.ph_depth;
+    if (!mix) return;
+    ph_lfo += LFO_INC[(patch.ph_rate * 3u) >> 2] * (n / CTL);   /* 0.1 .. ~9 Hz, a block at a time */
+    for (c = 0; c < 2u; c++) {
+        int32_t lfo = sine_i(ph_lfo + (c ? 0x40000000u : 0u)), idx = 64 + ((lfo * depth) >> 16), a1;
+        a1 = PH_A[clamp(idx, 0, 127)];
+        ph_a_d[c] = (a1 - ph_a[c]) / (int32_t)n;
+    }
+    for (i = 0; i < n; i++) {
+        for (c = 0; c < 2u; c++) {
+            int32_t in = st[2u * i + c], x = in + mulq15(ph_last[c], fb), a = ph_a[c];
+            for (k = 0; k < 6u; k++) {               /* y = -a x + x1 + a y1 */
+                int32_t y = -mulq15(x, a) + ph_x[c][k] + mulq15(ph_y[c][k], a);
+                ph_x[c][k] = x; ph_y[c][k] = clamp(y, -(1 << 20), 1 << 20); x = y;
+            }
+            ph_last[c] = x;
+            ph_a[c] += ph_a_d[c];
+            st[2u * i + c] = in + mulq15(x, mix);
+        }
+    }
+}
+
 /* ---- the reverb: a plate after Dattorro (1997), in fixed point. The input is diffused by four allpasses and fed to
  * two cross-coupled tanks, each a slowly modulated allpass, a delay, the damping low-pass, an allpass and a delay,
  * with the decay applied twice round; the output is Dattorro's seven taps a side. SIZE is the decay time (0.5 .. 25 s),
@@ -159,7 +213,7 @@ static void fx_reverb(const int32_t *st, int32_t *wet, uint32_t n)   /* st: L R 
         rv_fbr = mulq15r(tr, decay);
         rv_w++;
         { int32_t l2 = (l * 3 + r), r2 = (r * 3 + l); l = l2; r = r2; }   /* x8 back, then 0.375 with a quarter of each in the other: wide, mono-safe */
-        { int32_t yl = ((l - rv_dcxl) << 6) + rv_dcyl - (rv_dcyl >> 10), yr = ((r - rv_dcxr) << 6) + rv_dcyr - (rv_dcyr >> 10);   /* DC blockers, ~7 Hz, state in 1/64 */
+        { int32_t yl = ((l - rv_dcxl) << 6) + rv_dcyl - leak10(rv_dcyl), yr = ((r - rv_dcxr) << 6) + rv_dcyr - leak10(rv_dcyr);   /* DC blockers, ~7 Hz, state in 1/64 */
           rv_dcxl = l; rv_dcyl = yl; l = yl >> 6; rv_dcxr = r; rv_dcyr = yr; r = yr >> 6; }
         l = soft_knee(l, 20000); r = soft_knee(r, 20000);   /* a loud wash bends rather than slams the master knee */
         if (shim) {                                  /* the shimmer: the output an octave up, back to the input */

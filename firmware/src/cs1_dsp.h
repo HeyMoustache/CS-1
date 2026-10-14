@@ -7,7 +7,9 @@
 #include "cs1_tables.h"
 
 static inline int32_t mulq15(int32_t a, int32_t b) { return (a * b) >> 15; }
-static inline int32_t mulq15r(int32_t a, int32_t b) { return (a * b + 16384) >> 15; }   /* rounded: no limit cycles in loops */
+/* a leaky integrator's leak that always moves the state at least a step toward 0 (a plain shift parks it a few LSB off) */
+static inline int32_t leak10(int32_t y) { return y > 0 ? (y + 1023) >> 10 : y >> 10; }
+static inline int32_t mulq15r(int32_t a, int32_t b) { return (a * b) / 32768; }   /* toward zero, either sign: no bias, and a feedback loop's gain is below one at the last bit, so it decays to 0 (a shift floors, and holds -1 for ever) */
 static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
 
 /* a sine of the phase, linearly interpolated between the 1024 table points */
@@ -105,8 +107,8 @@ static inline void svf_coef(svf_t *c, int32_t cut16, int32_t k)
 static inline void svf_step(const svf_t *c, int32_t in, int32_t *ic1, int32_t *ic2, int32_t *lp, int32_t *hp)
 {
     int32_t v3 = in - *ic2;
-    int32_t v1 = (c->a1 * *ic1 + c->a2 * v3) >> 13;
-    int32_t v2 = *ic2 + ((c->a2 * *ic1 + c->a3 * v3) >> 13);
+    int32_t v1 = (c->a1 * *ic1 + c->a2 * v3 + 4096) >> 13;       /* rounded: the state settles at 0, not a few LSB below */
+    int32_t v2 = *ic2 + ((c->a2 * *ic1 + c->a3 * v3 + 4096) >> 13);
     *ic1 = clamp(2 * v1 - *ic1, -150000, 150000);
     *ic2 = clamp(2 * v2 - *ic2, -150000, 150000);
     *lp = v2;

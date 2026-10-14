@@ -66,7 +66,7 @@ typedef struct { const char *name; uint8_t off, max, kind, global, color; const 
 #define NONE {0, 0, 0, 0, 0, 0, 0, 0}
 typedef struct { const char *title; pdesc_t p[4]; } page_t;
 enum { PG_HOME = 0, PG_VCO, PG_VCO2, PG_VCF, PG_FENV, PG_VENV, PG_VCA2, PG_TOUCH,
-       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_MAIN, PG_MIDI, NPAGE };
+       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_PHASER, PG_MAIN, PG_MIDI, NPAGE };
 static const page_t PAGES[NPAGE] = {
     {"TONES", {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
                        GL(mix, "MIX", 127, K_NUM, CW, "II", "I"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
@@ -102,9 +102,11 @@ static const page_t PAGES[NPAGE] = {
     {"DELAY",  {GL(dly_time, "TIME", 127, K_NUM, CW, "LONG", "SHORT"), GL(dly_fb, "FEEDBK", 127, K_NUM, CW, "10", "0"),
                 GL(dly_mix, "MIX", 127, K_NUM, CS, "10", "0"), GL(dly_sync, "SYNC", 7, K_DIV, CK, "", "")}},
     {"DELAY 2", {GL(dly_ping, "PING", 1, K_ONOFF, CK, "", ""), GL(dly_damp, "DAMP", 127, K_NUM, CG, "10", "0"),
-                 GL(dly_sync, "SYNC", 7, K_DIV, CK, "", ""), GL(dly_sync, "TEMPO", 0, K_TEMPO, CW, "", "")}},
+                 GL(dly_sync, "SYNC", 7, K_DIV, CK, "", ""), GL(dly_tape, "TAPE", 127, K_NUM, CY, "10", "0")}},
     {"REVERB", {GL(rv_mix, "MIX", 127, K_NUM, CS, "10", "0"), GL(rv_size, "SIZE", 127, K_NUM, CW, "LONG", "SHORT"),
                 GL(rv_damp, "DAMP", 127, K_NUM, CG, "10", "0"), GL(rv_shim, "SHIMMR", 127, K_NUM, CY, "10", "0")}},
+    {"PHASER", {GL(ph_rate, "RATE", 127, K_NUM, CW, "FAST", "SLOW"), GL(ph_depth, "DEPTH", 127, K_NUM, CG, "10", "0"),
+                GL(ph_fb, "FEEDBK", 127, K_NUM, CR, "10", "0"), GL(ph_mix, "MIX", 127, K_NUM, CS, "10", "0")}},
     {"MAIN",   {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
                 ST(rolloff, "TONE", 127, K_NUM, CY, "WARM", "OPEN"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
     {"MIDI",   {ST(midi_chan, "CHAN", 16, K_MCHAN, CW, "16", "OMNI"), ST(expr, "EXPR", 127, K_EXPR, CW, "CC", "AT"),
@@ -113,7 +115,7 @@ static const page_t PAGES[NPAGE] = {
 /* the pages a button cycles through, for the "2/4" in the header: {first, count} by page */
 static const uint8_t PAGE_GROUP[NPAGE][2] = {
     {PG_HOME, 1}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7},
-    {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 3}, {PG_PLAY, 3}, {PG_PLAY, 3}, {PG_RING, 5}, {PG_RING, 5}, {PG_RING, 5}, {PG_RING, 5}, {PG_RING, 5},
+    {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 3}, {PG_PLAY, 3}, {PG_PLAY, 3}, {PG_RING, 6}, {PG_RING, 6}, {PG_RING, 6}, {PG_RING, 6}, {PG_RING, 6}, {PG_RING, 6},
     {PG_MAIN, 2}, {PG_MAIN, 2}};
 static const char *const N_FEET[4] = {"16'", "8'", "4'", "2'"};
 static const char *const N_WAVE[3] = {"SAW", "PULSE", "BOTH"};
@@ -161,7 +163,9 @@ static const patch_t INIT_PATCH = {                   /* the globals; sound_load
     {{FT_8, W_SAW, 0, 0, 40, 0, 0, 127, 110, 0, 0, 127, 0, 64, 64, 0, 40, 40, 20, 60, 127, 50, 0, 0, 0, 0},
      {FT_8, W_SAW, 0, 0, 40, 0, 0, 127, 110, 0, 0, 127, 0, 64, 64, 0, 40, 40, 20, 60, 127, 50, 0, 0, 0, 0}},
     60, LW_SINE, 0, 0, 0, 64, 64, 100,
-    64, 0, 0, 0,  0, 0, 0,  0, 64, 0, 10, 60,  CHO_OFF, 30, 60,  40, 60, 0, 40,  70, 50, 0, 1, 40,  0, 80, 50, 0,  64,  30, 0, 0,  64, 64, 64, 64};
+    64, 0, 0, 0,  0, 0, 0,  0, 64, 0, 10, 60,  CHO_OFF, 30, 60,  40, 60, 0, 40,  70, 50, 0, 1, 40,  0, 80, 50, 0,  64,  30, 0, 0,  64, 64, 64, 64,
+    .ph_rate = 40, .ph_depth = 64, .ph_fb = 40,
+};
 
 /* sounds: a tone on each channel and the globals, the way the CS-80's two rows get combined */
 /* a sound: a tone on each channel, the globals, and a few tweaks to the channels' own parameters. A field left 0
@@ -183,6 +187,7 @@ typedef struct {
     uint8_t rv_mix, rv_size, rv_damp, rv_shim;        /* rv_size 0 = 80, rv_damp 0 = 50 */
     uint8_t dly_time, dly_fb, dly_mix, dly_ping;      /* dly_time 0 = 70, dly_fb 0 = 50 */
     uint8_t dly_sync, vintage;                        /* the delay's clock division (0 free); vintage 0 = 30 */
+    uint8_t dly_tape;                                 /* the delay's tape character */
     tweak_t tw[12];
 } sound_t;
 enum { T_STR1 = 0, T_STR2, T_STR3, T_STR4, T_BRS1, T_BRS2, T_FLUTE, T_BRS3, T_EPIANO, T_BASS, T_CLAV1, T_CLAV2,
@@ -199,21 +204,21 @@ static const sound_t SOUNDS[] = {
     {.name = "BR BLUES", .tone = {T_STR3, T_BRS3}, .feet1 = {F4, F8}, .level = {110, 95}, .brill = 70, .reso = 68, .detune = 72,
      .porta = 30, .at_vco = 34, .at_brill = 70, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 75, .v_a = 40, .v_r = 80,
      .aat_delay = 45, .aat_rise = 65, .aat_level = 110, .aat_fall = 60, .rv_size = 115, .rv_shim = 25,
-     .dly_time = 84, .dly_fb = 45, .dly_mix = 30, .dly_ping = 1, .dly_sync = 6, .tw = {TW(0, lp_cut, 100), TW(1, lp_cut, 90), TWEND}},
+     .dly_time = 84, .dly_fb = 45, .dly_mix = 30, .dly_tape = 50, .dly_ping = 1, .dly_sync = 6, .tw = {TW(0, lp_cut, 100), TW(1, lp_cut, 90), TWEND}},
     {.name = "BR FLUTE", .tone = {T_FLUTE, T_ORG2}, .feet1 = {F8, F16}, .level = {115, 60}, .brill = 60, .detune = 68,
      .porta = 60, .at_vco = 22, .at_brill = 40, .cho_mode = CHO_CHORUS, .cho_spd = 16, .cho_depth = 70, .v_a = 48,
      .aat_delay = 60, .aat_rise = 75, .aat_level = 70, .aat_fall = 50, .rv_size = 100,
-     .dly_time = 90, .dly_fb = 50, .dly_mix = 45, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
+     .dly_time = 90, .dly_fb = 50, .dly_mix = 45, .dly_tape = 50, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
     {.name = "BR STRINGS", .tone = {T_STR1, T_STR2}, .feet1 = {F8, F16}, .level = {115, 90}, .brill = 56, .reso = 66, .detune = 72,
      .porta = 22, .at_vco = 19, .at_brill = 50, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 85, .v_a = 85, .v_r = 95,
      .aat_delay = 55, .aat_rise = 80, .aat_level = 90, .aat_fall = 60, .rv_size = 118, .rv_shim = 30, .tw = {TWEND}},
     {.name = "CHARIOTS", .tone = {T_BRS1, T_BRS3}, .level = {115, 105}, .brill = 72, .reso = 66, .detune = 70,
      .porta = 10, .at_vco = 32, .at_brill = 80, .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 55, .v_a = 30,
      .aat_delay = 40, .aat_rise = 55, .aat_level = 95, .rv_size = 95,
-     .dly_time = 96, .dly_fb = 55, .dly_mix = 50, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
+     .dly_time = 96, .dly_fb = 55, .dly_mix = 50, .dly_tape = 50, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
     {.name = "UNKNOWN MAN", .tone = {T_BRS1, T_STR2}, .level = {115, 80}, .brill = 66, .reso = 64, .detune = 69,
      .porta = 26, .at_vco = 36, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 60, .v_a = 36,
-     .aat_delay = 40, .aat_rise = 60, .aat_level = 100, .rv_size = 100, .dly_time = 100, .dly_fb = 40, .dly_mix = 35, .dly_sync = 3, .tw = {TWEND}},
+     .aat_delay = 40, .aat_rise = 60, .aat_level = 100, .rv_size = 100, .dly_time = 100, .dly_fb = 40, .dly_mix = 35, .dly_tape = 50, .dly_sync = 3, .tw = {TWEND}},
     /* Syntorial's Blade Runner brass: two 50 % pulses an octave apart, 6 cents off, PWM at ~4 Hz, a 650 ms filter
      * swell that takes 10 s to fall, the amplifier at 250 ms / 1.9 s / 40 % / 750 ms, a big reverb at 10 % */
     {.name = "BR BRASS 2", .tone = {T_BRS1, T_BRS2}, .feet1 = {F8, F4}, .level = {115, 85}, .brill = 64, .reso = 64, .detune = 56,
@@ -225,16 +230,16 @@ static const sound_t SOUNDS[] = {
     {.name = "BRASS SWELL", .tone = {T_BRS1, T_BRS2}, .level = {118, 95}, .brill = 60, .reso = 62, .detune = 67,
      .at_vco = 19, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 40, .v_a = 55, .v_r = 100,
      .aat_delay = 40, .aat_rise = 80, .aat_level = 90, .rv_size = 100,
-     .dly_time = 95, .dly_fb = 70, .dly_mix = 35, .dly_ping = 1,
+     .dly_time = 95, .dly_fb = 70, .dly_mix = 35, .dly_tape = 50, .dly_ping = 1,
      .dly_sync = 4, .tw = {TW(2, f_il, 64), TW(2, f_al, 104), TW(2, f_a, 94), TW(2, f_d, 120), TW(2, f_r, 120), TW(2, v_s, 120)}},
     /* Blade Runner Blues as a forum player had it on the Arturia: Brass 1 + 2 with the performance side up */
     {.name = "BR BLUES 2", .tone = {T_BRS1, T_BRS2}, .level = {115, 110}, .brill = 66, .reso = 66, .detune = 70,
      .porta = 24, .at_vco = 34, .at_brill = 110, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 70, .v_a = 36, .v_r = 85,
      .aat_delay = 40, .aat_rise = 60, .aat_level = 115, .aat_fall = 60, .rv_size = 115,
-     .dly_time = 84, .dly_fb = 45, .dly_mix = 30, .dly_ping = 1, .dly_sync = 6, .tw = {TWEND}},
+     .dly_time = 84, .dly_fb = 45, .dly_mix = 30, .dly_tape = 50, .dly_ping = 1, .dly_sync = 6, .tw = {TWEND}},
     /* the End Titles' sequenced bass: two saws an octave apart, the filter under an envelope; no chorus */
     {.name = "END TITLES", .tone = {T_BRS1, T_BRS2}, .feet1 = {F16, F8}, .level = {118, 100}, .brill = 60, .reso = 72, .detune = 66,
-     .rv_size = 70, .dly_time = 80, .dly_fb = 40, .dly_mix = 25, .dly_ping = 1,
+     .rv_size = 70, .dly_time = 80, .dly_fb = 40, .dly_mix = 25, .dly_tape = 50, .dly_ping = 1,
      .dly_sync = 4, .tw = {TW(2, f_il, 64), TW(2, f_al, 100), TW(2, f_a, 0), TW(2, f_d, 70), TW(2, v_a, 0), TW(2, v_r, 40)}},
     {.name = "CHIMES", .tone = {T_FLUTE, T_BASS}, .feet1 = {F4, F4}, .level = {110, 90}, .brill = 70,
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 40, .rm_mod = 115, .rm_spd = 78, .rm_depth = 60, .rm_d = 85,
@@ -265,7 +270,7 @@ static const sound_t SOUNDS[] = {
      .rv_size = 60, .tw = {TW(2, lp_res, 90), TW(2, f_al, 100), TW(2, f_d, 60), TWEND}},
     {.name = "BABOOSHKA", .tone = {T_FLUTE, T_ORG2}, .level = {118, 55}, .brill = 66, .detune = 67,
      .porta = 40, .at_vco = 26, .at_brill = 30, .lfo_spd = 66, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 50,
-     .v_a = 20, .aat_delay = 45, .aat_rise = 60, .aat_level = 80, .rv_size = 80, .dly_time = 80, .dly_fb = 35, .dly_mix = 25, .dly_sync = 3, .tw = {TWEND}},
+     .v_a = 20, .aat_delay = 45, .aat_rise = 60, .aat_level = 80, .rv_size = 80, .dly_time = 80, .dly_fb = 35, .dly_mix = 25, .dly_tape = 50, .dly_sync = 3, .tw = {TWEND}},
     {.name = "DUCHESS", .tone = {T_STR3, T_STR4}, .level = {115, 110}, .brill = 60, .reso = 64, .detune = 70,
      .porta = 45, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 80, .v_a = 70, .v_r = 85, .rv_size = 100, .tw = {TWEND}},
     {.name = "TURN IT ON", .tone = {T_BRS1, T_BRS3}, .level = {118, 110}, .brill = 70, .reso = 70, .detune = 68,
@@ -274,7 +279,7 @@ static const sound_t SOUNDS[] = {
      .cho_mode = CHO_CHORUS, .cho_spd = 16, .cho_depth = 90, .v_a = 80, .v_r = 100, .rv_size = 110, .tw = {TWEND}},
     {.name = "VIENNA", .tone = {T_STR1, T_BRS3}, .level = {115, 95}, .brill = 54, .reso = 72, .detune = 69,
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 65, .v_a = 55, .v_r = 90, .rv_size = 110,
-     .dly_time = 100, .dly_fb = 50, .dly_mix = 35, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
+     .dly_time = 100, .dly_fb = 50, .dly_mix = 35, .dly_tape = 50, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
     {.name = "OXYGENE", .tone = {T_STR3, T_STR4}, .feet1 = {F8, F16}, .level = {115, 100}, .brill = 56, .detune = 72,
      .lfo_spd = 50, .lfo_vcf = 25, .cho_mode = CHO_CHORUS, .cho_spd = 14, .cho_depth = 95, .v_a = 90, .v_r = 110,
      .rv_size = 120, .rv_shim = 20, .tw = {TW(0, pwm, 60), TW(0, pwm_spd, 36), TW(0, wave, W_BOTH), TWEND}},
@@ -293,10 +298,10 @@ static const sound_t SOUNDS[] = {
     {.name = "LONG BRASS", .tone = {T_BRS2, T_BRS3}, .level = {112, 112}, .brill = 60, .reso = 66, .detune = 70,
      .at_vco = 22, .at_brill = 100, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 60, .v_a = 95, .v_r = 90,
      .aat_delay = 70, .aat_rise = 100, .aat_level = 110, .aat_fall = 70, .rv_size = 110,
-     .dly_time = 104, .dly_fb = 55, .dly_mix = 40, .dly_ping = 1, .dly_sync = 5, .tw = {TWEND}},
+     .dly_time = 104, .dly_fb = 55, .dly_mix = 40, .dly_tape = 50, .dly_ping = 1, .dly_sync = 5, .tw = {TWEND}},
     {.name = "SHRIEK LEAD", .tone = {T_FNK3, T_FNK1}, .feet1 = {F2, F4}, .level = {115, 90}, .brill = 80, .reso = 96, .detune = 70,
      .porta = 20, .at_vco = 34, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 30, .cho_depth = 50,
-     .rv_size = 100, .dly_time = 90, .dly_fb = 50, .dly_mix = 35, .tw = {TWEND}},
+     .rv_size = 100, .dly_time = 90, .dly_fb = 50, .dly_mix = 35, .dly_tape = 50, .tw = {TWEND}},
     {.name = "SQUELCH BASS", .tone = {T_FNK1, T_BASS}, .feet1 = {F16, F16}, .level = {110, 110}, .brill = 60, .reso = 100, .detune = 66,
      .rv_size = 50, .tw = {TW(2, f_a, 0), TW(2, f_d, 50), TW(2, v_r, 35), TWEND}},
     /* ---- the manual's own examples and the plain pairs */
@@ -320,16 +325,16 @@ static const sound_t SOUNDS[] = {
     {.name = "CLAVS", .tone = {T_CLAV1, T_CLAV2}, .level = {110, 100}, .cho_mode = CHO_OFF, .rv_size = 50, .tw = {TWEND}},
     {.name = "HARPSI", .tone = {T_HARP1, T_HARP2}, .cho_mode = CHO_OFF, .rv_size = 60, .tw = {TWEND}},
     {.name = "E.PIANO", .tone = {T_EPIANO, T_STR4}, .level = {120, 50}, .cho_mode = CHO_CHORUS, .cho_spd = 30, .cho_depth = 50,
-     .rv_size = 70, .dly_mix = 20, .tw = {TWEND}},
+     .rv_size = 70, .dly_mix = 20, .dly_tape = 50, .tw = {TWEND}},
     {.name = "FUNKY 1+2", .tone = {T_FNK1, T_FNK2}, .cho_mode = CHO_OFF, .rv_size = 50, .tw = {TWEND}},
 };
 #define NSOUND (sizeof SOUNDS / sizeof SOUNDS[0])
 
-#define SET_MAGIC 0xCDu
+#define SET_MAGIC 0xCEu
 
 /* the user presets: 32 slots of 128 bytes in the bank sector, each a magic, the tones and the patch */
 #define NUSER 32u
-#define SLOT_MAGIC 0xA5u
+#define SLOT_MAGIC 0xA6u
 typedef struct { uint8_t magic, tone[2], pad; patch_t patch; } slot_t;
 _Static_assert(sizeof(slot_t) <= 128, "a slot fits 128 bytes");
 static union { slot_t slot[NUSER]; uint8_t raw[NUSER * 128u]; } bank;   /* (the union pads each slot to 128) */
@@ -396,6 +401,8 @@ static void sound_load(uint32_t i)
     patch.dly_ping = sd->dly_ping;
     patch.dly_damp = 40;
     patch.dly_sync = sd->dly_sync;
+    patch.dly_tape = sd->dly_tape;
+    patch.ph_rate = 40; patch.ph_depth = 64; patch.ph_fb = 40; patch.ph_mix = 0;   /* the phaser: off, set up */
     patch.lfo_sync = 0;
     patch.vintage = DEF(sd->vintage, 30);
     patch.kb_bl = patch.kb_bh = patch.kb_ll = patch.kb_lh = 64;
@@ -863,7 +870,7 @@ static void app_loop(void)
     if (b & (1u << BTN_EDIT)) page = page >= PG_VCO && page < PG_TOUCH ? page + 1u : PG_VCO;
     if (b & (1u << BTN_ENV)) page = page == PG_FENV ? PG_VENV : PG_FENV;
     if (b & (1u << BTN_LFO)) page = page >= PG_SUB && page < PG_AUTO ? page + 1u : PG_SUB;
-    if (b & (1u << BTN_FX)) page = page >= PG_RING && page < PG_REVERB ? page + 1u : PG_RING;
+    if (b & (1u << BTN_FX)) page = page >= PG_RING && page < PG_PHASER ? page + 1u : PG_RING;
     if (b & (1u << BTN_ARP)) page = page >= PG_PLAY && page < PG_SUS ? page + 1u : PG_PLAY;
     if (b & (1u << BTN_GLO)) page = page == PG_MAIN ? PG_MIDI : PG_MAIN;
     if (b & (1u << BTN_SEL)) { set.chan ^= 1u; changed(); if (page == PG_HOME) page_drawn = ~0u; }
@@ -1039,7 +1046,7 @@ static void app_loop(void)
     fm1_led_key(BTN_EDIT, page >= PG_VCO && page <= PG_TOUCH);
     fm1_led_key(BTN_ENV, page == PG_FENV || page == PG_VENV);
     fm1_led_key(BTN_LFO, page >= PG_SUB && page <= PG_AUTO);
-    fm1_led_key(BTN_FX, page >= PG_RING && page <= PG_REVERB);
+    fm1_led_key(BTN_FX, page >= PG_RING && page <= PG_PHASER);
     fm1_led_key(BTN_ARP, page >= PG_PLAY && page <= PG_SUS);
     fm1_led_key(BTN_PLAY, sustain);
     fm1_led_key(BTN_SEQ, aat_on);

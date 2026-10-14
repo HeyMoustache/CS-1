@@ -79,7 +79,7 @@ check("a fresh instance with the saved sector starts an octave up", (b.ex.web_le
   const before = d.ex.web_bank_saves();
   d.tap(BTN.SAVE); d.ex.web_enc(6, 1); d.render(60); d.tap(BTN.SAVE);
   const bank = new Uint8Array(d.ex.memory.buffer, d.ex.web_bank(), d.ex.web_bank_size());
-  check("SAVE, PRESETS, SAVE writes the user bank (slot 2's magic set)", d.ex.web_bank_saves() === before + 1 && bank[128] === 0xA5 && bank[0] !== 0xA5);
+  check("SAVE, PRESETS, SAVE writes the user bank (slot 2's magic set)", d.ex.web_bank_saves() === before + 1 && bank[128] === 0xA6 && bank[0] !== 0xA6);
 }
 
 // ---- deterministic

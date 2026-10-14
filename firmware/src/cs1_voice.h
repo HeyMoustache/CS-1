@@ -46,8 +46,10 @@ typedef struct {
     uint8_t vintage;                                  /* the voices' drift: each wanders a few cents on its own */
     uint8_t dly_sync, lfo_sync;                       /* MIDI clock: the delay's and the sub oscillator's divisions, 0 free */
     uint8_t kb_bl, kb_bh, kb_ll, kb_lh;               /* KEYBOARD CONTROL: brilliance and level, LOW and HIGH (64 = flat) */
+    uint8_t dly_tape;                                 /* TAPE: wow and flutter, saturation and darkening in the delay's loop */
+    uint8_t ph_rate, ph_depth, ph_fb, ph_mix;         /* the phaser */
 } patch_t;
-_Static_assert(sizeof(patch_t) <= 96, "the patch fits the settings");
+_Static_assert(sizeof(patch_t) <= 104, "the patch fits the settings and a bank slot");
 enum { CHO_OFF = 0, CHO_CHORUS, CHO_TREMOLO };
 
 typedef struct {
@@ -86,6 +88,7 @@ static volatile uint8_t aat_on = 1;     /* the auto after touch's switch (the ma
 static volatile uint8_t tone_set = 100; /* TONE: a fixed 12 dB/octave roll-off on the dry sum, as the instrument's output has it:
                                          * 0 off, 100 = 2.4 kHz as measured on the CS-80 V, 127 = 1.6 kHz (the main loop's) */
 static svf_t tone_c;
+static int32_t dc_x, dc_y;                /* the dry sum's DC blocker: last input, output (in 1/64) */
 static int32_t tone_s1, tone_s2;
 static volatile uint32_t sync_dly;      /* the delay's time from the MIDI clock, in frames (the main loop's) */
 static volatile uint32_t sync_lfo;      /* the sub oscillator's phase step a tick from the MIDI clock */
@@ -438,6 +441,7 @@ static void voices_block(int32_t *out, uint32_t n)
     for (i = 0; i < HALF_FRAMES; i++) {
         int32_t x = g_mix[0][i] >> 2, lp, hp;
         if (tone_set) { svf_step(&tone_c, x, &tone_s1, &tone_s2, &lp, &hp); x = lp; }
+        { int32_t y = ((x - dc_x) << 6) + dc_y - leak10(dc_y); dc_x = x; dc_y = y; x = y >> 6; }   /* a DC blocker, ~7 Hz: the filters' integer states park a few LSB off zero */
 #ifndef MASTER_KNEE
 #define MASTER_KNEE 16000
 #endif
@@ -452,6 +456,7 @@ static void voices_block(int32_t *out, uint32_t n)
     chorus(g_mix[0], g_st, HALF_FRAMES);
     dbg_meter(1, g_st, 2u * HALF_FRAMES);
     fx_delay(g_st, HALF_FRAMES);
+    fx_phaser(g_st, HALF_FRAMES);
     dbg_meter(2, g_st, 2u * HALF_FRAMES);
     if (submitted) {                                /* the worker made this block's wet from the last block's sum */
         for (i = 0; i < 2u * HALF_FRAMES; i++) { rv_src[i] = g_st[i]; g_st[i] += rv_wet[i]; }

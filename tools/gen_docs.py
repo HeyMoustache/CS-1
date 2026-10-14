@@ -26,7 +26,7 @@ for m in re.finditer(r'\{"([^"]+)",\s*\{(.*?)\}\},', block, re.S):
 CAP = {"CW": "w", "CG": "g", "CR": "r", "CK": "k", "CY": "y", "CS": "s"}
 GROUP = {"TONES": "HOME", "VCO": "EDIT", "VCO 2": "EDIT", "VCF": "EDIT", "VCF EG": "EDIT", "VCA EG": "EDIT", "VCA": "EDIT", "TOUCH": "EDIT",
          "SUB OSC": "LFO", "SUB OSC 2": "LFO", "TOUCH RESP": "LFO", "AUTO AT": "LFO", "PERFORM": "ARP", "KEYBOARD": "ARP", "SUSTAIN": "ARP",
-         "RING MOD": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "MAIN": "GLO", "MIDI": "GLO"}
+         "RING MOD": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "PHASER": "FX", "MAIN": "GLO", "MIDI": "GLO"}
 PAGE_NOTE = {
     "TONES": "The HOME page: the two rows of tone buttons, the sound's name, and the lower panel's performance levers.",
     "VCO": "The oscillator of the channel being edited (SEL picks I or II). The CS-80's VCO section.",
@@ -46,7 +46,8 @@ PAGE_NOTE = {
     "RING MOD": "The ring modulator on both channels' sum: a sine carrier, its rate pushed up by an attack / decay envelope at every note.",
     "CHORUS": "The ring modulator's envelope decay, and the chorus / tremolo: the CS-80's slow phasing tremolo between left and right (stereo here).",
     "DELAY": "A stereo delay, with SYNC overriding TIME in note divisions of the MIDI clock.",
-    "DELAY 2": "The delay's ping-pong, the damping in its feedback, its sync, and the tempo the clock gives.",
+    "DELAY 2": "The delay's ping-pong, the damping in its feedback, its sync, and TAPE: the character of a tape echo.",
+    "PHASER": "A six-stage phaser, the right side a quarter turn behind the left. Not on the CS-80; of its era.",
     "REVERB": "A plate after Dattorro: diffused input, two cross-coupled tanks with slowly wandering allpasses, damping in the loop. With a shimmer: the output fed back an octave up.",
     "MAIN": "The lower panel's levers: brilliance and resonance offsets for every filter, TONE, the output level. TONE is an instrument setting rather than part of a sound.",
     "MIDI": "The channel listened to, which CC acts as pressure, program change on or off, and the learned CC bindings (turn down to clear).",
@@ -84,7 +85,9 @@ DESC = {
     ("DELAY", "TIME"): "10 ms to 1.1 s, when SYNC is FREE.", ("DELAY", "FEEDBK"): "Repeats.", ("DELAY", "MIX"): "The delay's level; 0 is off.",
     ("DELAY", "SYNC"): "FREE, or a note division of the MIDI clock that overrides TIME.",
     ("DELAY 2", "PING"): "The right side on a tap at half the time.", ("DELAY 2", "DAMP"): "A low-pass in the feedback: repeats get darker.",
-    ("DELAY 2", "SYNC"): "As on the DELAY page.", ("DELAY 2", "TEMPO"): "The tempo the clock gives, in brackets when no clock has arrived for two seconds (120 at power-on).",
+    ("DELAY 2", "SYNC"): "As on the DELAY page.", ("DELAY 2", "TAPE"): "A tape echo's character: the repeats wander a little (wow and flutter), darken each pass and saturate in the feedback. 0 is the clean delay.",
+    ("PHASER", "RATE"): "The sweep's speed, 0.1 to 9 Hz.", ("PHASER", "DEPTH"): "How far the sweep travels, 100 Hz to 5 kHz at full.", ("PHASER", "FEEDBK"): "Feedback round the stages: sharper notches.", ("PHASER", "MIX"): "The phased signal added to the dry; 0 is off.",
+    ("DELAY 2", "TEMPO"): "The tempo the clock gives, in brackets when no clock has arrived for two seconds (120 at power-on).",
     ("REVERB", "MIX"): "The reverb's level; 0 is off.", ("REVERB", "SIZE"): "The decay, half a second to about 25 s.",
     ("REVERB", "DAMP"): "Darkens the tail.", ("REVERB", "SHIMMR"): "Feeds the tail back an octave up: it climbs in octaves. Its loop never runs away.",
     ("MAIN", "BRILL"): "As on HOME.", ("MAIN", "RESO"): "As on HOME.", ("MAIN", "TONE"): "A gentle 12 dB per octave roll-off above the filters, as the instrument's output stage has it: off at 0, 2.4 kHz at 100 (the CS-80 V's, measured), 1.6 kHz at full. It takes the glass off the sawtooth; BRILL on HOME still opens the filters under it.", ("MAIN", "VOLUME"): "As on HOME.",
