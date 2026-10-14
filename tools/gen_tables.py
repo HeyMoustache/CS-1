@@ -36,6 +36,10 @@ def g_of(note):
     return round(4096 * math.tan(math.pi * f / FS))
 table("SVF_G", "int32_t", [g_of(n) for n in range(137)], 8)
 
+# resonance knob 0..127 -> the SVF's damping k (Q12, k = 1/Q): the peak in dB is -6 + 16 (1 - e^(-r/1.8)) for r = knob/12.7,
+# measured against the CS-80 V (chart 2 -> +5.7 dB, 8.5 -> +8.9 dB); 0 is Q 0.5 (k 2.0), 127 about +10 dB
+table("SVF_KT", "uint16_t", [round(4096 / 10 ** ((-6 + 16 * (1 - math.exp(-(i / 12.7) / 1.8))) / 20)) for i in range(128)], 8)
+
 # tanh(x / 32768) * 32767 for x = 0, 256, .. 65536 (257 points): the soft clip
 table("TANH_Q15", "int16_t", [round(32767 * math.tanh(i * 256 / 32768)) for i in range(257)])
 

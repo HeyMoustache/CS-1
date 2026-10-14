@@ -202,7 +202,7 @@ static void chan_render(voice_t *v, uint32_t ch, int32_t *mix)
     int32_t vel = v->vel, at_to = v->at_eff, at_from = s->at16;    /* the pressure: ramped over the block (Q15) */
     int32_t vel_q15 = 32767 - mulq15(p->it_level * 258, (127 - vel) * 258);     /* INITIAL LEVEL: 0 = no velocity */
     int32_t itouch16 = ((vel - 64) * p->it_brill * 6) >> 7;                     /* INITIAL BRILLIANCE: +-24 semitones */
-    int32_t kbd16 = ((int32_t)v->note - 60) * 8;       /* the filters track the keyboard by half */
+    int32_t kbd16 = ((int32_t)v->note - 60) * 16;      /* the filters track the keyboard 1:1 (as the CS-80 V does) */
     int32_t brill16 = ((int32_t)patch.brill - 64) * 12, reso = (int32_t)patch.reso - 64;
     int32_t pitch256 = v->pitch256 + v->pb256 + FEET_SEMIS[p->feet] * 256 + (ch ? ((int32_t)patch.detune - 64) * 2 : 0);
     int32_t vca_depth = patch.lfo_vca * 258;
@@ -251,7 +251,7 @@ static void chan_render(voice_t *v, uint32_t ch, int32_t *mix)
             svf_step(&s->lp, clamp(hp, -65535, 65535), &l1, &l2, &lp, &x);
             x = mulq15(soft_knee(lp, 24000), vcf_lv);
             if (sine_lv)
-                x += mulq15(sine_i(ph), sine_lv);
+                x -= mulq15(sine_i(ph), sine_lv);   /* the rising saw's fundamental is -sin: in phase with it */
             ph += inc;
             mix[t * CTL + i] += mulq15(x, amp);
         }

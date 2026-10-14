@@ -98,8 +98,8 @@ static inline void svf_coef(svf_t *c, int32_t cut16, int32_t k)
     c->a3 = (c->a2 * g) >> 12;
     c->k = k;
 }
-#define SVF_K(res) (8192 - (res) * 6900 / 127)     /* resonance 0..127 -> damping Q12, 2.0 .. 0.32 (a peak of ~10 dB:
-                                                     * the CS-80's filters never self-oscillate) */
+#define SVF_K(res) ((int32_t)SVF_KT[(res)])        /* resonance 0..127 -> damping Q12 (cs1_tables.h): 2.0 .. 0.32, the peak
+                                                     * rising fast then levelling near +10 dB; the CS-80's filters never self-oscillate */
 /* one sample: lp, bp and hp of in; the states ic1, ic2 */
 static inline void svf_step(const svf_t *c, int32_t in, int32_t *ic1, int32_t *ic2, int32_t *lp, int32_t *hp)
 {
