@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS-1 manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1><a href="./">CS-1</a></h1>
+    <p>manual</p>
+    <nav><a href="sound.html">Sound design</a><a href="reference.html">Reference</a><a href="emu/">Play it</a><a href="https://github.com/twochannels/CS-1">Source</a></nav>
+  </header>
+
+  <ul class="toc">
+    <li><a href="#panel">The panel</a></li><li><a href="#screen">The screen</a></li><li><a href="#playing">Playing</a></li>
+    <li><a href="#tones">Tones and sounds</a></li><li><a href="#saving">Saving your own</a></li><li><a href="#pages">The pages</a></li>
+    <li><a href="#midi">MIDI</a></li><li><a href="#auto">Auto after touch</a></li><li><a href="#emulator">The emulator</a></li>
+  </ul>
+  <p class="note">Everything here works the same in the <a href="emu/">browser emulator</a>: it runs the firmware itself. Open it beside this page and try things as you read.</p>
+
+  <h2 id="panel">The panel</h2>
+  <p>The FM-1 has seven encoders, fourteen buttons, a MASTER knob and 27 keys. CS-1 uses them like this:</p>
+  <table>
+    <tr><th>Control</th><th>Does</th></tr>
+    <tr><td class="k">KNOB 1 – 4</td><td>The four sliders of the page on the screen.</td></tr>
+    <tr><td class="k">SELECT</td><td>Turns the pages, all of them in order.</td></tr>
+    <tr><td class="k">PRESETS</td><td>The sounds: the 45 factory sounds, then your 32 user slots.</td></tr>
+    <tr><td class="k">ALGORITHM</td><td>Steps along the selected channel's row of tones (see <a href="#tones">tones</a>).</td></tr>
+    <tr><td class="k">MASTER</td><td>Volume, after everything.</td></tr>
+    <tr><td class="k">HOME</td><td>The TONES page. Held, the keys become the tone buttons.</td></tr>
+    <tr><td class="k">EDIT</td><td>The channel's sections in turn: VCO, VCO 2, VCF, VCF EG, VCA EG, VCA, TOUCH.</td></tr>
+    <tr><td class="k">SEL</td><td>Channel I or II for editing and for the tone row. Lit for II.</td></tr>
+    <tr><td class="k">ENV</td><td>VCF EG, then VCA EG.</td></tr>
+    <tr><td class="k">LFO</td><td>SUB OSC, SUB OSC 2, TOUCH RESP, AUTO AT.</td></tr>
+    <tr><td class="k">FX</td><td>RING MOD, CHORUS, DELAY, DELAY 2, REVERB.</td></tr>
+    <tr><td class="k">ARP</td><td>PERFORM, KEYBOARD, SUSTAIN.</td></tr>
+    <tr><td class="k">GLO</td><td>MAIN, then MIDI.</td></tr>
+    <tr><td class="k">SAVE</td><td>Saves the panel into a user slot (<a href="#saving">below</a>).</td></tr>
+    <tr><td class="k">REC</td><td>MIDI learn (<a href="#midi">below</a>). Lit while waiting.</td></tr>
+    <tr><td class="k">SEQ</td><td>The auto after touch on or off. Lit when on.</td></tr>
+    <tr><td class="k">PLAY</td><td>Hold: a sustain latch, as if the pedal were down. Lit when on.</td></tr>
+    <tr><td class="k">OCT− OCT+</td><td>The keys' octave, two each way. Both together: all notes off.</td></tr>
+  </table>
+
+  <h2 id="screen">The screen</h2>
+  <div class="shot">
+    <figure><img src="img/vco.png" alt="The VCO page"><figcaption>A page: the section's name between rules, the position in the button's cycle at the left, the channel at the right.</figcaption></figure>
+    <figure><img src="img/venv.png" alt="The VCA EG page with the envelope drawn"><figcaption>The envelope pages draw the shape the knobs make, live.</figcaption></figure>
+    <figure><img src="img/reverb.png" alt="The REVERB page with the monitor strip"><figcaption>Other pages carry the monitor: output level, pressure, voices.</figcaption></figure>
+  </div>
+  <p>Every page is four sliders drawn as the CS-80 panel had them: a slot with tick marks, a cap in the panel's colour for that control, the value beside the cap, the slider's legends above and below, the name beneath. Turning KNOB 1 to 4 moves them. The header shows the section's name, where you are in a button's cycle (2/4), and on channel pages which channel you are editing, as a lit orange button. The status line at the bottom shows the two tones playing (with a star when the channel's panel has moved away from the tone), the octave, how many voices sound, and on the FM-1 how much of its time the audio takes.</p>
+  <p>The strip above the status line is a monitor on most pages: <b>OUT</b> is the output level, green up to the point where the master knee starts to bend it, yellow in the knee; <b>AT</b> is the pressure in effect, so you can watch the auto after touch curve; the eight dots are the voices. On VCF EG, VCA EG, AUTO AT and SUB OSC the strip draws the envelope, the curve or the waveform instead.</p>
+
+  <h2 id="playing">Playing</h2>
+  <p>The keys play, polyphonically, eight voices with the oldest stolen. OCT− and OCT+ move them two octaves each way. Velocity does what the TOUCH page's I.LEV and I.BRIL say, and the FM-1's keys send a fixed velocity, so from the keys those two do nothing; from MIDI they do. PLAY latches a sustain, which in SUSTAIN mode II (ARP, third page) ends the previous chord's notes when you play the next.</p>
+  <p>The CS-80 had pressure under every key. CS-1 takes pressure from channel or polyphonic aftertouch, from a CC (the mod wheel by default: the MIDI page's EXPR), and from the <a href="#auto">auto after touch</a> curve, whichever is highest. Pressure drives A.BRIL and A.LEV on each channel's TOUCH page, and on the TOUCH RESP page the sub oscillator's speed, pitch depth and filter depth.</p>
+
+  <h2 id="tones">Tones and sounds</h2>
+  <div class="shot"><figure><img src="img/home.png" alt="The TONES page"><figcaption>HOME: the two rows of eleven tone buttons; the lit ones are playing; the orange underline marks the row SEL has chosen.</figcaption></figure></div>
+  <p>A <b>tone</b> is one channel's panel: one of the CS-80's 22 presets, read off its manual. Row I's eleven and row II's eleven are the two rows of buttons on the real instrument, and CS-1 keeps to them: channel I plays row I tones, channel II row II. Hold <b>HOME</b> and press a key: the lower eleven keys (F3 up to D♯4) are row I's buttons in order, the upper eleven (A4 up to G5) row II's; the key LEDs show the two lit tones while HOME is held. ALGORITHM steps along the selected channel's row too.</p>
+  <p>A <b>sound</b> is everything: both channels' tones and panels, the performance section and the effects. PRESETS runs through the 45 factory sounds, then your user slots; program change does the same. The HOME page shows the sound's name, with a star as soon as you change anything.</p>
+
+  <h2 id="saving">Saving your own</h2>
+  <ol>
+    <li>Load a sound and edit anything, on any page.</li>
+    <li>Press <b>SAVE</b>. The status line proposes a slot: the first free one for a factory sound, its own for a user sound. Turn PRESETS for another.</li>
+    <li>Press <b>SAVE</b> again. The whole panel goes into the slot. HOME cancels while it is asking.</li>
+  </ol>
+  <p>To go back to a sound as it was stored, turn PRESETS one click away and one back. The slots live in their own flash sector; in the emulator they live in the browser, and <b>Export presets</b> there writes them to a file you can import on another machine.</p>
+
+  <h2 id="pages">The pages</h2>
+  <p>The <a href="reference.html">reference</a> lists every page and every parameter, generated from the firmware. The short version of what lives where:</p>
+  <table>
+    <tr><th>Button</th><th>Pages</th><th>What</th></tr>
+    <tr><td class="k">HOME</td><td>TONES</td><td>The tone rows, the sound, BRILL RESO MIX VOLUME.</td></tr>
+    <tr><td class="k">EDIT</td><td>VCO · VCO 2 · VCF · VCF EG · VCA EG · VCA · TOUCH</td><td>The selected channel's panel, in the CS-80's section order.</td></tr>
+    <tr><td class="k">LFO</td><td>SUB OSC · SUB OSC 2 · TOUCH RESP · AUTO AT</td><td>The sub oscillator, its tremolo and clock sync, the pressure levers, the auto curve.</td></tr>
+    <tr><td class="k">ARP</td><td>PERFORM · KEYBOARD · SUSTAIN</td><td>Portamento, glissando, detune, vintage; keyboard control; sustain mode.</td></tr>
+    <tr><td class="k">FX</td><td>RING MOD · CHORUS · DELAY · DELAY 2 · REVERB</td><td>The effects.</td></tr>
+    <tr><td class="k">GLO</td><td>MAIN · MIDI</td><td>The performance levers again; the MIDI settings.</td></tr>
+  </table>
+
+  <h2 id="midi">MIDI</h2>
+  <div class="shot"><figure><img src="img/midi.png" alt="The MIDI page"><figcaption>The MIDI page: the channel, the expression CC, program change, the learned bindings.</figcaption></figure></div>
+  <p>CS-1 listens on USB and on the TRS jack alike. On the MIDI page (GLO twice) set <b>CHAN</b> to a channel or OMNI, <b>EXPR</b> to the CC that acts as pressure (AT means aftertouch only), and <b>PROG</b> to accept program change.</p>
+  <h3>MIDI learn</h3>
+  <p>Press <b>REC</b>, turn the panel knob you want to control (on whatever page), then move the controller's knob. That CC now sets that parameter whatever page is showing. Sixteen bindings, kept with the settings; <b>LEARNS</b> on the MIDI page counts them and clears them when turned down to 0. Binding a CC already used, or a parameter already bound, replaces the old one. REC again cancels.</p>
+  <h3>The fixed map</h3>
+  <table>
+    <tr><th>CC</th><th>Sets</th></tr>
+    <tr><td class="k">1 (or EXPR)</td><td>pressure</td></tr>
+    <tr><td class="k">5</td><td>portamento time</td></tr>
+    <tr><td class="k">7</td><td>volume</td></tr>
+    <tr><td class="k">64</td><td>sustain pedal</td></tr>
+    <tr><td class="k">71 / 74</td><td>resonance / brilliance</td></tr>
+    <tr><td class="k">72 / 73 / 75</td><td>VCA release / attack / decay, both channels</td></tr>
+    <tr><td class="k">76 / 77</td><td>sub oscillator speed / vibrato depth</td></tr>
+    <tr><td class="k">78</td><td>auto after touch level</td></tr>
+    <tr><td class="k">80 – 83</td><td>the page's KNOB 1 – 4 (absolute)</td></tr>
+    <tr><td class="k">84 / 85 / 86 / 87</td><td>brilliance / resonance / vibrato / reverb mix</td></tr>
+    <tr><td class="k">91 / 93 / 94 / 95</td><td>reverb / chorus depth / delay mix / shimmer</td></tr>
+    <tr><td class="k">120 / 123</td><td>all notes off</td></tr>
+  </table>
+  <p>Notes with velocity, channel and polyphonic aftertouch, pitch bend (two semitones), program change (the sounds, then the user slots) and clock all work. <b>Clock</b>: the DELAY page's SYNC overrides TIME with a note division, SUB OSC 2's SYNC locks the sub oscillator to beats or bars, and a start message restarts its cycle. DELAY 2 shows the tempo.</p>
+
+  <h2 id="auto">Auto after touch</h2>
+  <div class="shot"><figure><img src="img/auto.png" alt="The AUTO AT page with its curve drawn"><figcaption>AUTO AT: the wait, the rise, the level, the fall.</figcaption></figure></div>
+  <p>A sequencer has no hands, so every note can play a pressure curve of its own: it waits <b>DELAY</b>, rises over <b>RISE</b> to <b>LEVEL</b>, holds, and falls over <b>FALL</b> when the key goes. It goes through the same path as real pressure, so A.BRIL, A.LEV and the TOUCH RESP levers all follow it as one gesture, and real pressure or the expression CC still win when higher. <b>SEQ</b> switches it on and off (an AUTO chip on HOME shows it); each sound carries its own curve.</p>
+
+  <h2 id="emulator">The emulator</h2>
+  <p>The <a href="emu/">browser emulator</a> runs the firmware itself, against a simulated FM-1, in Chrome or Edge (Web MIDI) or any modern browser (without MIDI). Drag or scroll the knobs, click or touch the keys and buttons, <kbd>Shift</kbd>-click a button to hold it (hold HOME this way and press keys for the tones). The computer keyboard plays: <kbd>Q</kbd>–<kbd>I</kbd> and <kbd>A</kbd>–<kbd>K</kbd> the white keys, the digits the black ones, <kbd>Space</kbd> PLAY, <kbd>Enter</kbd> REC, <kbd>Shift</kbd> SEL, <kbd>Esc</kbd> HOME, <kbd>Z</kbd>/<kbd>X</kbd> the octave, the arrows SELECT and PRESETS. Pick your controller under MIDI in; what arrives is shown beside it. Settings and user presets stay in the browser; export and import move them. What it cannot tell you is how much of the FM-1's time the audio takes: that figure is on the real unit's status line.</p>
+  <footer><small>CS-1 is GPL-3.0; M-VAVE and FM-1 are their owners' marks, CS-80 is Yamaha's. CS-1 is affiliated with none of them.</small></footer>
+</main>
+</body>
+</html>

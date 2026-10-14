@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS-1 sound design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1><a href="./">CS-1</a></h1>
+    <p>sound design: how the CS-80 voice works, and how to get its sounds</p>
+    <nav><a href="manual.html">Manual</a><a href="reference.html">Reference</a><a href="emu/">Play it</a><a href="https://github.com/twochannels/CS-1">Source</a></nav>
+  </header>
+  <ul class="toc">
+    <li><a href="#voice">The voice, in order</a></li><li><a href="#two">Two channels</a></li><li><a href="#filters">The two filters</a></li>
+    <li><a href="#sine">The sine</a></li><li><a href="#fenv">The filter envelope</a></li><li><a href="#touch">Touch</a></li>
+    <li><a href="#sub">The sub oscillator</a></li><li><a href="#ring">The ring modulator</a></li><li><a href="#brass">Recipes: brass</a></li>
+    <li><a href="#strings">Recipes: strings and pads</a></li><li><a href="#leads">Recipes: leads, bass, bells</a></li><li><a href="#fx">The effects</a></li><li><a href="#records">The records</a></li>
+  </ul>
+  <p class="note">Each "Try" button opens the emulator on a sound. Hold a chord, let the auto after touch open it, then find the page named in the text and turn the knob while it plays. The sounds load dry, as the CS-80 was: the reverb is yours to add on the REVERB page (FX, five presses), where each sound carries a size, damping and shimmer ready for MIX.</p>
+
+  <h2 id="voice">The voice, in order</h2>
+  <p>A CS-1 voice is two CS-80 channels playing the same note. Each channel, in signal order: an oscillator (sawtooth and / or pulse, plus noise) → a high-pass filter → a low-pass filter → the amplifier, where a pure sine from the same oscillator joins, having skipped the filters. A filter envelope moves both filters together; an ADSR drives the amplifier; velocity and pressure push brightness and level. Then the two channels sum, go through the ring modulator, the chorus, the delay and the reverb. The sub oscillator and the performance levers act on every voice at once.</p>
+  <p>That order explains most of what makes the instrument sound as it does. The things to internalise: the filters are 12 dB an octave and never scream, the sine is after the filter, the filter envelope has initial and attack levels instead of a sustain, and nearly everything is meant to move under your hand.</p>
+
+  <h2 id="two">Two channels</h2>
+  <p>The fatness people associate with the CS-80 is two channels of a different tone each, slightly out of tune. Start every sound by asking what each channel should contribute: one the body, one the edge; one at 8', one at 16' or 4'; one sawtooth, one pulse with PWM. The <b>MIX</b> lever on HOME balances them; <b>DETUNE</b> on PERFORM sets channel II against I, and a little goes a long way: 3 to 8 either way beats slowly, 20 is a chorus of its own. <b>VINTAGE</b> adds a wander on top, per voice, which is what the real voice cards did whether you wanted it or not.</p>
+  <p><a class="try" href="emu/?sound=37">Try STRINGS 1+2</a> then set MIX fully to I, then fully to II, and hear what each is doing.</p>
+
+  <h2 id="filters">The two filters</h2>
+  <p>Each channel's VCF page has a high-pass with its resonance and a low-pass with its resonance, in series. The low-pass alone is the ordinary synth filter. The high-pass alone thins: raise HPF and the fundamental goes, leaving the harmonics, which is how the thin chimes and the "wah" character come about. Both together make a bandpass, and a narrow one with resonance on both is the manual's own recipe for the oboe and the clavichord. Neither self-oscillates; RES.L up to full gives a peak of about 10 dB. <b>BRILL</b> and <b>RESO</b> on HOME shift all four filters of both channels at once and are the levers you reach for while playing.</p>
+  <p>The filters track the keyboard by half, and the KEYBOARD page tilts them further: BRIL.LO at − keeps the bottom of a chord dark while the top stays open, which is what big brass chords want.</p>
+  <p><a class="try" href="emu/?sound=35">Try OBOE</a>, hold a note, and on the VCF page move HPF and LPF towards each other until the sound closes to nothing, then back off.</p>
+
+  <h2 id="sine">The sine</h2>
+  <p>The SINE lever on VCO 2 adds a pure sine from the oscillator <em>after</em> the filters. It cannot be filtered, so it gives a sound body and fundamental that survive however far you close the low-pass. The flute is mostly sine with a touch of filtered saw; brass gets its weight from a little sine under the filter sweep; a bass gets its sub from it. Turn SINE up on a thin bandpass sound and it fills out without getting brighter.</p>
+
+  <h2 id="fenv">The filter envelope</h2>
+  <div class="shot"><figure><img src="img/fenv.png" alt="The VCF EG page"><figcaption>IL below, AL above, the attack between them, the decay back to rest, the release to IL in yellow.</figcaption></figure></div>
+  <p>The CS-80's filter envelope has no sustain. It starts the cutoff at <b>IL</b> (below the resting setting when negative), rises over <b>A</b> to <b>AL</b> (above when positive), falls over <b>D</b> back to where the VCF page's knobs put the cutoff, and sits there while the key is down. On release it returns to IL over <b>VCF R</b> (on the VCA page). The brass sound is IL well below, AL well above, a medium attack and decay: dark, then bright, then settling. With both at 0 the envelope does nothing and the VCA envelope shapes the note alone, which is the flute. A short "blip" for plucks is AL up with attack and decay both short. The page draws the shape as you turn the knobs.</p>
+  <p><a class="try" href="emu/?sound=33">Try TRUMPET</a> and on VCF EG move IL down and AL up; then shorten A to hear the "twang".</p>
+
+  <h2 id="touch">Touch</h2>
+  <p>On a CS-80 the player's hands did the rest: pressing into the keys opened the filters, raised the level, deepened the vibrato. Each channel's TOUCH page has the four levers: I.BRIL and I.LEV for velocity, A.BRIL and A.LEV for pressure. The TOUCH RESP page adds the performance levers: pressure into the sub oscillator's speed, pitch depth and filter depth, and the initial pitch bend that starts a note below and slides up by velocity, the brass "twang".</p>
+  <p>Without a pressure keyboard, use the <b>AUTO AT</b> page: a curve every note plays by itself, delay then rise then level, falling after the key goes. Set it long on pads (DELAY 50, RISE 80) and it swells; set it fast on brass and it opens the filter on each note like a player leaning in. A sequencer's macro on CC 1 adds real pressure on top. SEQ switches the curve off when you want the keys plain.</p>
+  <p><a class="try" href="emu/?sound=30">Try LONG BRASS</a>, hold a chord for five seconds and watch the AT bar on the monitor strip rise with the sound.</p>
+
+  <h2 id="sub">The sub oscillator</h2>
+  <p>The CS-80's one LFO, for every voice. FUNC picks sine, triangle, sawtooth, inverted sawtooth or square; SPEED its rate; VCO, VCF and VCA (on SUB OSC 2) how much goes to pitch, filter and level. A slow sine to VCO at a small amount is vibrato; a sawtooth to VCF at a moderate amount is a rhythmic filter pulse, and the inverted sawtooth makes it bounce the other way, which with the resonance up is the "Wonderful Christmastime" bass. SUB OSC 2's SYNC locks the cycle to the sequencer's clock in beats or bars, and a start message lines it up with the one.</p>
+  <p>Each channel also has its own PWM oscillator (VCO page: PWM depth, VCO 2: SPEED) for the pulse width alone, which is where string sounds get their movement: a pulse at 70 % with PWM at a slow speed, as the manual's "Multiple Strings" recipe says.</p>
+  <p><a class="try" href="emu/?sound=18">Try XMAS BASS</a> on a single low note, then on SUB OSC change FUNC to SAW and hear the bounce reverse.</p>
+
+  <h2 id="ring">The ring modulator</h2>
+  <p>It multiplies both channels' sum by a sine. MOD is how much of that replaces the plain signal; SPEED the sine's rate; DEPTH and ATTACK (RING MOD) with R.DECAY (CHORUS page) an envelope that pushes the rate up on every note and lets it fall. Slow rates are a tremolo with a twist, fast ones turn any tone into bells and gongs: the manual's recipe is MOD and SPEED fully up on a 4' flute. Used sparingly it adds life to a static tone; used fully it is the metallic sound in the Blade Runner chimes.</p>
+  <p><a class="try" href="emu/?sound=10">Try CHIMES</a>, then on RING MOD bring MOD down to 30 and SPEED to 20 for a slow, strange tremolo.</p>
+
+  <h2 id="brass">Recipes: brass</h2>
+  <p>Sawtooth on both channels (the preset Brass 1 on I and Brass 2 on II is the classic start), a few units of DETUNE, the low-pass half open with a little resonance, IL below and AL above with a medium attack, a slow-ish VCA attack, and the sine a touch up for weight. Then the touch: A.BRIL high, A.VCO up for vibrato under pressure, and the auto after touch at a medium delay so the sound blooms on held chords. BRILL on HOME is your tone control while playing; BRIL.LO at − keeps the bass end of a chord from muddying. Finish with the chorus slow, and a long reverb if the room wants one.</p>
+  <p>The two documented recipes for the Blade Runner brass take different roads: BLADE BRASS builds it from the presets, BR BRASS 2 follows Syntorial's analysis (two 50 % pulses an octave apart, 6 cents off, PWM at about 4 Hz, a 650 ms filter swell that takes ten seconds to fall). Compare them on the same chord.</p>
+  <p><a class="try" href="emu/?sound=0">Try BLADE BRASS</a> <a class="try" href="emu/?sound=6">Try BR BRASS 2</a> <a class="try" href="emu/?sound=4">Try CHARIOTS</a></p>
+
+  <h2 id="strings">Recipes: strings and pads</h2>
+  <p>Strings are a pulse with PWM on one channel and a sawtooth on the other, the filters mostly open, slow attacks on both envelopes, a long release, DETUNE and VINTAGE up, and the chorus deep and slow. The manual suggests one channel at 16' with less PWM, the other at 8' with more. For the Thriller sounds the record's recipe is String 1 on I with Brass 2 on II, mixed evenly, brilliance a little down and resonance high; for Africa it is String 1 with String 4, three quarters channel I. A pad is the same with everything slower, SINE up for warmth, and the reverb long: ENO WASH has the attack past a second and, with MIX up, a hall at its longest with shimmer.</p>
+  <p><a class="try" href="emu/?sound=14">Try HUMAN NATURE</a> <a class="try" href="emu/?sound=11">Try AFRICA</a> <a class="try" href="emu/?sound=26">Try ENO WASH</a></p>
+
+  <h2 id="leads">Recipes: leads, bass, bells</h2>
+  <p>A lead wants portamento (PERFORM) and vibrato under pressure (TOUCH RESP's VCO), one channel an octave up, and often the initial pitch bend for a scoop into each note. Set GLISS on and the glide steps chromatically, as Porcaro's does on Human Nature. A bass is the Bass preset: sawtooth and pulse together, the filter closed down, a snappy filter envelope and short release; for the squelch raise RES.L and AL. Bells are the ring modulator at speed on a bright simple tone at 4', and a long reverb suits them.</p>
+  <p><a class="try" href="emu/?sound=2">Try BR FLUTE</a> <a class="try" href="emu/?sound=19">Try WHO BASS</a> <a class="try" href="emu/?sound=31">Try SHRIEK LEAD</a></p>
+
+  <h2 id="fx">The effects</h2>
+  <p>The <b>chorus</b> is the CS-80's: a slow phasing tremolo between left and right that widens anything; TREM is the faster, deeper version. The <b>delay</b> is the echo on every Vangelis record: FEEDBK around 50, MIX to taste, PING for the stereo bounce, and SYNC to the sequencer's clock so it lands on the beat (a dotted eighth is the usual choice). The <b>reverb</b> is a hall up to 25 seconds; DAMP darkens its tail. <b>SHIMMR</b> feeds the tail back an octave up, so a chord keeps climbing after you let go: a little (20 to 40) under a pad is magic, more becomes the sound. The sounds carry their own chorus and delay, and a reverb size, damping and shimmer with MIX at 0: the CS-80 had no reverb, so the choice is yours, on the REVERB page or over CC 91.</p>
+  <p>One thing to know about the reverb: its input is scaled to its decay, so a held chord in a long hall does not get louder than the chord, and a short hit leaves a tail that starts below the hit. If you want the tail hotter for sparse playing, MIX has the range.</p>
+
+  <h2 id="records">The records</h2>
+  <p>The <a href="reference.html#sounds">reference</a> lists all 45 sounds with the tones and the records they are after. The ones built on documented settings rather than on the preset names alone: HUMAN NATURE and BILLIE JEAN (Reverb Machine's recipe), AFRICA (the same), XMAS BASS (the sub oscillator settings from the same source), 4001 PLUCK and 4001 STRINGS (Squarepusher's filter and vibrato figures), BR BRASS 2, BILLIE KEYS and AFRICA 2 (Syntorial's recipes), BRASS SWELL (MusicTech's). The rest follow what the sources say about the sound and the technique, and are a starting point, not a transcription.</p>
+  <footer><small>CS-1 is GPL-3.0; M-VAVE and FM-1 are their owners' marks, CS-80 is Yamaha's. CS-1 is affiliated with none of them.</small></footer>
+</main>
+</body>
+</html>
