@@ -40,3 +40,6 @@ td.k { white-space: nowrap; font-family: "Barlow Semi Condensed", sans-serif; fo
 footer { margin-top: 3rem; color: var(--muted); font-size: 14px; border-top: 1px solid var(--rule); padding-top: 1rem; }
 .toc { columns: 2; column-gap: 2rem; font-size: 15px; } .toc li { break-inside: avoid; }
 @media (max-width: 640px) { .toc { columns: 1; } }
+
+.lead { font-size: 1.25rem; line-height: 1.45; max-width: 40rem; margin: .4rem 0; }
+.lead + .lead { font-size: 1.05rem; color: var(--muted); }
