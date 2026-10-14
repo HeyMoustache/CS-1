@@ -11,23 +11,24 @@
 /* ---- the delay */
 #define DLY_LEN 49152u                   /* 1.1 s */
 static int16_t dly_line[DLY_LEN] FM1_POOL;
-static uint32_t dly_w;
+static uint32_t dly_w;                               /* the write index, wrapped by a compare (no modulo: the chip has no divider) */
 static int32_t dly_lp;
+static inline uint32_t dly_back(uint32_t back) { uint32_t p = dly_w + DLY_LEN - back; return p >= DLY_LEN ? p - DLY_LEN : p; }
 static void fx_delay(int32_t *st, uint32_t n)       /* st: L R L R ..., in place */
 {
     uint32_t i, time = patch.dly_sync ? sync_dly : DLY_TIME[patch.dly_time], half = time >> 1;
     int32_t fb = patch.dly_fb * 250, mix = patch.dly_mix * 258, damp = 32767 - patch.dly_damp * 230;
     if (!mix) {                                     /* off: the line keeps filling, so turning MIX up finds a tail */
-        for (i = 0; i < n; i++) { dly_line[dly_w % DLY_LEN] = (int16_t)clamp((st[2u * i] + st[2u * i + 1u]) >> 1, -32767, 32767); dly_w++; }
+        for (i = 0; i < n; i++) { dly_line[dly_w] = (int16_t)clamp((st[2u * i] + st[2u * i + 1u]) >> 1, -32767, 32767); if (++dly_w == DLY_LEN) dly_w = 0; }
         return;
     }
     for (i = 0; i < n; i++) {
         int32_t in = (st[2u * i] + st[2u * i + 1u]) >> 1;
-        int32_t tap = dly_line[(dly_w - time) % DLY_LEN];
-        int32_t tap2 = patch.dly_ping ? dly_line[(dly_w - half) % DLY_LEN] : tap;
+        int32_t tap = dly_line[dly_back(time)];
+        int32_t tap2 = patch.dly_ping ? dly_line[dly_back(half)] : tap;
         dly_lp += mulq15(tap - dly_lp, damp);       /* the loop's damping */
-        dly_line[dly_w % DLY_LEN] = (int16_t)clamp(in + mulq15(dly_lp, fb), -32767, 32767);
-        dly_w++;
+        dly_line[dly_w] = (int16_t)clamp(in + mulq15(dly_lp, fb), -32767, 32767);
+        if (++dly_w == DLY_LEN) dly_w = 0;
         st[2u * i] += mulq15(tap, mix);
         st[2u * i + 1u] += mulq15(tap2, mix);
     }
@@ -57,6 +58,7 @@ static int32_t rv_d2l[RV_D2_L] FM1_POOL, rv_d2r[RV_D2_R] FM1_POOL;
 #define SH_LEN 8192u                     /* the shimmer's grain: 186 ms, two heads half a grain apart */
 static int16_t sh_line[SH_LEN] FM1_POOL;
 static uint32_t rv_w, sh_w, sh_ph, rv_lfo[2];
+static uint32_t rv_wi[4], rv_wap0[2], rv_wd1[2], rv_wap1[2], rv_wd2[2];   /* each buffer's write index */
 static int32_t rv_bw, rv_lpl, rv_lpr, rv_fbl, rv_fbr;   /* the input bandwidth, the two dampers, the cross-feeds */
 static int32_t rv_dcxl, rv_dcyl, rv_dcxr, rv_dcyr;   /* the output DC blockers' last input and output */
 static int32_t sh_fb, sh_lp;                        /* the shimmer's last sample, low-passed, into the next input */
@@ -65,28 +67,41 @@ static uint32_t rv_hot;                             /* samples a line had to ben
 #define dbg_meter(k, p, n) ((void)0)
 #endif
 
-static inline int32_t allpass16(int16_t *z, uint32_t len, uint32_t w, int32_t x, int32_t g)
+/* every buffer keeps its own write index and wraps by a compare: no modulo (the chip has no divider) */
+static inline uint32_t wrap_back(uint32_t w, uint32_t len, uint32_t back) { uint32_t p = w + len - back; return p >= len ? p - len : p; }
+static inline int32_t allpass16(int16_t *z, uint32_t len, uint32_t *w, int32_t x, int32_t g)
 {
-    int32_t d = z[w % len], v = x + mulq15r(d, g);     /* the lattice form: unity gain at every frequency */
-    z[w % len] = (int16_t)clamp(v, -32767, 32767);
+    int32_t d = z[*w], v = x + mulq15r(d, g);         /* the lattice form: unity gain at every frequency */
+    z[*w] = (int16_t)clamp(v, -32767, 32767);
+    if (++*w == len) *w = 0;
     return d - mulq15r(v, g);
 }
-static inline int32_t allpass32(int32_t *z, uint32_t len, uint32_t w, int32_t x, int32_t g)
+static inline int32_t allpass32(int32_t *z, uint32_t len, uint32_t *w, int32_t x, int32_t g)
 {
-    int32_t d = z[w % len], v = x + mulq15r(d, g);
-    z[w % len] = clamp(v, -(1 << 20), 1 << 20);
+    int32_t d = z[*w], v = x + mulq15r(d, g);
+    z[*w] = clamp(v, -(1 << 20), 1 << 20);
+    if (++*w == len) *w = 0;
     return d - mulq15r(v, g);
 }
-/* the modulated allpass: its delay wanders RV_MOD either side of len, read between frames */
-static inline int32_t allpass_mod(int32_t *z, uint32_t len, uint32_t w, int32_t x, int32_t g, uint32_t m16)
+/* the modulated allpass: its delay wanders RV_MOD either side of len, read between frames; the buffer is len + 64 */
+static inline int32_t allpass_mod(int32_t *z, uint32_t len, uint32_t *w, int32_t x, int32_t g, uint32_t m16)
 {
-    uint32_t size = len + 64u, dl = len - RV_MOD + (m16 >> 4);
-    int32_t a = z[(w - dl) % size], b = z[(w - dl - 1u) % size];
+    uint32_t size = len + 64u, dl = len - RV_MOD + (m16 >> 4), pa = wrap_back(*w, size, dl), pb = pa ? pa - 1u : size - 1u;
+    int32_t a = z[pa], b = z[pb];
     int32_t d = a + (((b - a) * (int32_t)(m16 & 15u)) >> 4), v = x + mulq15r(d, g);
-    z[w % size] = clamp(v, -(1 << 20), 1 << 20);
+    z[*w] = clamp(v, -(1 << 20), 1 << 20);
+    if (++*w == size) *w = 0;
     return d - mulq15r(v, g);
 }
-static inline int32_t tap32(const int32_t *z, uint32_t len, uint32_t w, uint32_t back) { return z[(w - back) % len]; }
+/* a delay line: write the new frame, return the oldest (len frames ago) */
+static inline int32_t delay32(int32_t *z, uint32_t len, uint32_t *w, int32_t x)
+{
+    int32_t d = z[*w];
+    z[*w] = clamp(x, -(1 << 20), 1 << 20);
+    if (++*w == len) *w = 0;
+    return d;
+}
+#define TAP(z, len, w, back) ((z)[wrap_back((w), (len), (back))])
 
 static void fx_reverb(int32_t *st, uint32_t n)
 {
@@ -110,40 +125,36 @@ static void fx_reverb(int32_t *st, uint32_t n)
         rv_pre[rv_w & 1023u] = (int16_t)clamp(in, -32767, 32767);
         x = rv_pre[(rv_w - 882u) & 1023u];           /* 20 ms later */
         rv_bw += mulq15r(x - rv_bw, 26000);           /* the input bandwidth: ~9 kHz */
-        x = allpass16(rv_in1, 210u, rv_w, rv_bw, 24576);   /* 0.75, 0.75, 0.625, 0.625 */
-        x = allpass16(rv_in2, 158u, rv_w, x, 24576);
-        x = allpass16(rv_in3, 561u, rv_w, x, 20480);
-        x = allpass16(rv_in4, 410u, rv_w, x, 20480);
+        x = allpass16(rv_in1, 210u, &rv_wi[0], rv_bw, 24576);   /* 0.75, 0.75, 0.625, 0.625 */
+        x = allpass16(rv_in2, 158u, &rv_wi[1], x, 24576);
+        x = allpass16(rv_in3, 561u, &rv_wi[2], x, 20480);
+        x = allpass16(rv_in4, 410u, &rv_wi[3], x, 20480);
         /* the two tanks, each fed by the input plus the other's end */
         rv_lfo[0] += 97391u; rv_lfo[1] += 68173u;    /* 1.0 Hz and 0.7 Hz */
         ml = (uint32_t)(sine_i(rv_lfo[0]) + 32768) * (RV_MOD * 2u * 16u) >> 16;   /* 0 .. 2 RV_MOD, in 1/16 frames */
         mr = (uint32_t)(sine_i(rv_lfo[1]) + 32768) * (RV_MOD * 2u * 16u) >> 16;
-        tl = allpass_mod(rv_ap0l, RV_AP0_L, rv_w, x + rv_fbr, -22938, ml);   /* -0.7 */
-        tr = allpass_mod(rv_ap0r, RV_AP0_R, rv_w, x + rv_fbl, -22938, mr);
-        rv_d1l[rv_w % RV_D1_L] = clamp(tl, -(1 << 20), 1 << 20);
-        rv_d1r[rv_w % RV_D1_R] = clamp(tr, -(1 << 20), 1 << 20);
-        tl = rv_d1l[(rv_w + 1u) % RV_D1_L];          /* the oldest frame: the delay's end */
-        tr = rv_d1r[(rv_w + 1u) % RV_D1_R];
-        rv_lpl += mulq15r(tl - rv_lpl, damp);         /* the damping, then the decay */
+        /* the taps are read before this frame's writes move the indices (Dattorro's nodes, scaled) */
+        l = TAP(rv_d1r, RV_D1_R, rv_wd1[1], 394u) + TAP(rv_d1r, RV_D1_R, rv_wd1[1], 4401u) - TAP(rv_ap1r, RV_AP1_R, rv_wap1[1], 2831u)
+          + TAP(rv_d2r, RV_D2_R, rv_wd2[1], 2954u) - TAP(rv_d1l, RV_D1_L, rv_wd1[0], 2945u) - TAP(rv_ap1l, RV_AP1_L, rv_wap1[0], 277u)
+          - TAP(rv_d2l, RV_D2_L, rv_wd2[0], 1578u);
+        r = TAP(rv_d1l, RV_D1_L, rv_wd1[0], 522u) + TAP(rv_d1l, RV_D1_L, rv_wd1[0], 5368u) - TAP(rv_ap1l, RV_AP1_L, rv_wap1[0], 1817u)
+          + TAP(rv_d2l, RV_D2_L, rv_wd2[0], 3956u) - TAP(rv_d1r, RV_D1_R, rv_wd1[1], 3124u) - TAP(rv_ap1r, RV_AP1_R, rv_wap1[1], 496u)
+          - TAP(rv_d2r, RV_D2_R, rv_wd2[1], 179u);
+        tl = allpass_mod(rv_ap0l, RV_AP0_L, &rv_wap0[0], x + rv_fbr, -22938, ml);   /* -0.7 */
+        tr = allpass_mod(rv_ap0r, RV_AP0_R, &rv_wap0[1], x + rv_fbl, -22938, mr);
+        tl = delay32(rv_d1l, RV_D1_L, &rv_wd1[0], tl);
+        tr = delay32(rv_d1r, RV_D1_R, &rv_wd1[1], tr);
+        rv_lpl += mulq15r(tl - rv_lpl, damp);        /* the damping, then the decay */
         rv_lpr += mulq15r(tr - rv_lpr, damp);
         tl = mulq15r(rv_lpl, decay);
         tr = mulq15r(rv_lpr, decay);
-        tl = allpass32(rv_ap1l, RV_AP1_L, rv_w, tl, 16384);   /* 0.5 */
-        tr = allpass32(rv_ap1r, RV_AP1_R, rv_w, tr, 16384);
-        rv_d2l[rv_w % RV_D2_L] = clamp(tl, -(1 << 20), 1 << 20);
-        rv_d2r[rv_w % RV_D2_R] = clamp(tr, -(1 << 20), 1 << 20);
-        tl = rv_d2l[(rv_w + 1u) % RV_D2_L];
-        tr = rv_d2r[(rv_w + 1u) % RV_D2_R];
+        tl = allpass32(rv_ap1l, RV_AP1_L, &rv_wap1[0], tl, 16384);   /* 0.5 */
+        tr = allpass32(rv_ap1r, RV_AP1_R, &rv_wap1[1], tr, 16384);
+        tl = delay32(rv_d2l, RV_D2_L, &rv_wd2[0], tl);
+        tr = delay32(rv_d2r, RV_D2_R, &rv_wd2[1], tr);
         if (tl > 120000 || tl < -120000 || tr > 120000 || tr < -120000) rv_hot++;
         rv_fbl = mulq15r(tl, decay);                 /* into the other tank next frame */
         rv_fbr = mulq15r(tr, decay);
-        /* Dattorro's taps (his figure's nodes, scaled): the left ear hears mostly the right tank and vice versa */
-        l = tap32(rv_d1r, RV_D1_R, rv_w, 394u) + tap32(rv_d1r, RV_D1_R, rv_w, 4401u) - tap32(rv_ap1r, RV_AP1_R, rv_w, 2831u)
-          + tap32(rv_d2r, RV_D2_R, rv_w, 2954u) - tap32(rv_d1l, RV_D1_L, rv_w, 2945u) - tap32(rv_ap1l, RV_AP1_L, rv_w, 277u)
-          - tap32(rv_d2l, RV_D2_L, rv_w, 1578u);
-        r = tap32(rv_d1l, RV_D1_L, rv_w, 522u) + tap32(rv_d1l, RV_D1_L, rv_w, 5368u) - tap32(rv_ap1l, RV_AP1_L, rv_w, 1817u)
-          + tap32(rv_d2l, RV_D2_L, rv_w, 3956u) - tap32(rv_d1r, RV_D1_R, rv_w, 3124u) - tap32(rv_ap1r, RV_AP1_R, rv_w, 496u)
-          - tap32(rv_d2r, RV_D2_R, rv_w, 179u);
         rv_w++;
         { int32_t l2 = (l * 3 + r) >> 3, r2 = (r * 3 + l) >> 3; l = l2; r = r2; }   /* 0.375, a quarter of each in the other: wide, mono-safe */
         { int32_t yl = ((l - rv_dcxl) << 6) + rv_dcyl - (rv_dcyl >> 10), yr = ((r - rv_dcxr) << 6) + rv_dcyr - (rv_dcyr >> 10);   /* DC blockers, ~7 Hz, state in 1/64 */
