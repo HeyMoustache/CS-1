@@ -80,7 +80,7 @@ DESC = {
     ("KEYBOARD", "BRIL.LO"): "Brighter (+) or darker (−) towards the bottom of the keyboard.", ("KEYBOARD", "BRIL.HI"): "The same towards the top.",
     ("KEYBOARD", "LEV.LO"): "Louder or quieter towards the bottom (it can only cut).", ("KEYBOARD", "LEV.HI"): "The same towards the top.",
     ("SUSTAIN", "MODE"): "I or II.",
-    ("RIBBON", "RANGE"): "How far a detent bends: 5 cents at FINE to two semitones at WIDE (two octaves at most).", ("RIBBON", "RETURN"): "The spring: at HOLD the bend stays where you left it; otherwise it returns to centre over this time (50 ms to 5 s) once the knob is still.",
+    ("RIBBON", "HOLD"): "OFF: the spring returns the bend to centre when the knob is still. ON: it stays where you leave it, and turning back through centre lands exactly on it.", ("RIBBON", "RANGE"): "How far a detent bends: 5 cents at FINE to two semitones at WIDE (two octaves at most).", ("RIBBON", "RETURN"): "The spring's time back to centre, 50 ms to 5 s, once the knob is still (SPRING mode).",
     ("RING MOD", "MOD"): "How much of the ring-modulated signal replaces the plain one.", ("RING MOD", "SPEED"): "The carrier's rate, 0.5 Hz to 2 kHz: slow is a tremolo, fast is bells.",
     ("RING MOD", "DEPTH"): "How far the envelope pushes the rate up.", ("RING MOD", "ATTACK"): "The envelope's attack.",
     ("CHORUS", "R.DECAY"): "The ring modulator envelope's decay.", ("CHORUS", "MODE"): "Off, chorus (slow and wide) or tremolo (faster, deeper in level).",
