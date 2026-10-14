@@ -25,7 +25,7 @@ for m in re.finditer(r'\{"([^"]+)",\s*\{(.*?)\}\},', block, re.S):
 
 CAP = {"CW": "w", "CG": "g", "CR": "r", "CK": "k", "CY": "y", "CS": "s"}
 GROUP = {"TONES": "HOME", "VCO": "EDIT", "VCO 2": "EDIT", "VCF": "EDIT", "VCF EG": "EDIT", "VCA EG": "EDIT", "VCA": "EDIT", "TOUCH": "EDIT",
-         "SUB OSC": "LFO", "SUB OSC 2": "LFO", "TOUCH RESP": "LFO", "AUTO AT": "LFO", "PERFORM": "ARP", "KEYBOARD": "ARP", "SUSTAIN": "ARP",
+         "SUB OSC": "LFO", "SUB OSC 2": "LFO", "TOUCH RESP": "LFO", "AUTO AT": "LFO", "PERFORM": "ARP", "KEYBOARD": "ARP", "SUSTAIN": "ARP", "RIBBON": "ARP",
          "RING MOD": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "REVERB 2": "FX", "PHASER": "FX", "MAIN": "GLO", "MIDI": "GLO"}
 PAGE_NOTE = {
     "TONES": "The HOME page: the two rows of tone buttons, the sound's name, and the lower panel's performance levers.",
@@ -43,6 +43,7 @@ PAGE_NOTE = {
     "PERFORM": "Portamento and glissando, channel II's detune, and VINTAGE: each voice drifting a few cents of its own.",
     "KEYBOARD": "Keyboard control: brilliance and level tilted towards the low or the high end of the keyboard. Nothing at middle C, full effect three octaves out.",
     "SUSTAIN": "Mode I sustains every note on its own; mode II ends the sustain of the chord before when a new one is played.",
+    "RIBBON": "The SELECT encoder is the ribbon: turning it bends the pitch of everything sounding, as the CS-80's ribbon did. Instrument settings.",
     "RING MOD": "The ring modulator on both channels' sum: a sine carrier, its rate pushed up by an attack / decay envelope at every note.",
     "CHORUS": "The ring modulator's envelope decay, and the chorus / tremolo: the CS-80's slow phasing tremolo between left and right (stereo here).",
     "DELAY": "A stereo delay, with SYNC overriding TIME in note divisions of the MIDI clock.",
@@ -79,6 +80,7 @@ DESC = {
     ("KEYBOARD", "BRIL.LO"): "Brighter (+) or darker (−) towards the bottom of the keyboard.", ("KEYBOARD", "BRIL.HI"): "The same towards the top.",
     ("KEYBOARD", "LEV.LO"): "Louder or quieter towards the bottom (it can only cut).", ("KEYBOARD", "LEV.HI"): "The same towards the top.",
     ("SUSTAIN", "MODE"): "I or II.",
+    ("RIBBON", "RANGE"): "How far a detent bends: 5 cents at FINE to two semitones at WIDE (two octaves at most).", ("RIBBON", "RETURN"): "The spring: at HOLD the bend stays where you left it; otherwise it returns to centre over this time (50 ms to 5 s) once the knob is still.",
     ("RING MOD", "MOD"): "How much of the ring-modulated signal replaces the plain one.", ("RING MOD", "SPEED"): "The carrier's rate, 0.5 Hz to 2 kHz: slow is a tremolo, fast is bells.",
     ("RING MOD", "DEPTH"): "How far the envelope pushes the rate up.", ("RING MOD", "ATTACK"): "The envelope's attack.",
     ("CHORUS", "R.DECAY"): "The ring modulator envelope's decay.", ("CHORUS", "MODE"): "Off, chorus (slow and wide) or tremolo (faster, deeper in level).",

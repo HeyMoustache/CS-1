@@ -84,6 +84,8 @@ typedef struct {
 static patch_t patch;
 static voice_t voices[NV];
 static volatile int32_t bend256;        /* pitch bend, 1/256 semitone (the main loop's) */
+static volatile int32_t rib_target256;  /* the ribbon (the SELECT encoder): where it is, 1/256 semitone (the main loop's) */
+static int32_t rib256;                  /* the render's: glides to the target a block at a time (~25 ms) */
 static volatile uint32_t rm_trig;       /* counts up on every note-on: the ring modulator's envelope restarts */
 static volatile uint8_t aat_on = 1;     /* the auto after touch's switch (the main loop's) */
 static volatile uint8_t tone_set = 100; /* TONE: a fixed 12 dB/octave roll-off on the dry sum, as the instrument's output has it:
@@ -120,6 +122,7 @@ static int32_t lfo_shape(uint32_t ph, uint32_t wave)
 static void block_prepare(void)
 {
     uint32_t t, i, ch, spd;
+    rib256 += (rib_target256 - rib256) >> 2;        /* the ribbon glides between detents */
     g_at = 0;
     for (i = 0; i < NV; i++)
         if (voices[i].active && (voices[i].at_eff >> 8) > g_at) g_at = voices[i].at_eff >> 8;
@@ -304,10 +307,10 @@ static void voices_render(uint32_t lo, uint32_t hi, int32_t *mix)
     for (v = lo; v < hi; v++) {
         voice_t *w = &voices[v];
         uint32_t trig = w->trig, any = 0;
-        int32_t target = (int32_t)w->note * 256 + bend256 + (((w->drift >> 8) * (int32_t)patch.vintage) >> 7);
+        int32_t target = (int32_t)w->note * 256 + bend256 + rib256 + (((w->drift >> 8) * (int32_t)patch.vintage) >> 7);
         if (trig != w->seen) {                         /* a new note: pitch, envelopes */
             w->seen = trig;
-            w->pitch256 = patch.porta ? w->from256 + bend256 : target;
+            w->pitch256 = patch.porta ? w->from256 + bend256 + rib256 : target;
             w->pb256 = -(((int32_t)w->vel * patch.pbend) >> 5);   /* INITIAL PITCHBEND: up to -2 semitones, velocity */
             w->aat_t = 0;                              /* the auto after touch curve starts over (keeping its level) */
             for (ch = 0; ch < NCH; ch++)

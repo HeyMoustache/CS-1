@@ -49,6 +49,7 @@ typedef struct {                                      /* what survives a power-o
     uint8_t nlearn;                                  /* MIDI learn: CCs bound to parameters (REC, a knob, a CC) */
     uint8_t aat_off;                                 /* the auto after touch switched off (SEQ) */
     uint8_t sus2;                                    /* SUSTAIN II: a new chord ends the sustain of the one before */
+    uint8_t rib_range, rib_return;                   /* the ribbon: cents a detent (RIB_CENTS), the spring (0 holds) */
     uint8_t rolloff;                                 /* TONE: the fixed roll-off above the filters (0 = off, 100 = the CS-80 V's) */
     struct { uint8_t cc, page, knob; } learn[16];
     patch_t patch;
@@ -66,7 +67,7 @@ typedef struct { const char *name; uint8_t off, max, kind, global, color; const 
 #define NONE {0, 0, 0, 0, 0, 0, 0, 0}
 typedef struct { const char *title; pdesc_t p[4]; } page_t;
 enum { PG_HOME = 0, PG_VCO, PG_VCO2, PG_VCF, PG_FENV, PG_VENV, PG_VCA2, PG_TOUCH,
-       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_REVERB2, PG_PHASER, PG_MAIN, PG_MIDI, NPAGE };
+       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RIB, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_REVERB2, PG_PHASER, PG_MAIN, PG_MIDI, NPAGE };
 static const page_t PAGES[NPAGE] = {
     {"TONES", {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
                        GL(mix, "MIX", 127, K_NUM, CW, "II", "I"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
@@ -95,6 +96,7 @@ static const page_t PAGES[NPAGE] = {
     {"KEYBOARD", {GL(kb_bl, "BRIL.LO", 127, K_BIP, CG, "+", "-"), GL(kb_bh, "BRIL.HI", 127, K_BIP, CG, "+", "-"),
                   GL(kb_ll, "LEV.LO", 127, K_BIP, CS, "+", "-"), GL(kb_lh, "LEV.HI", 127, K_BIP, CS, "+", "-")}},
     {"SUSTAIN", {ST(sus2, "MODE", 1, K_SUS, CK, "", ""), NONE, NONE, NONE}},
+    {"RIBBON",  {ST(rib_range, "RANGE", 127, K_NUM, CW, "WIDE", "FINE"), ST(rib_return, "RETURN", 127, K_NUM, CK, "SLOW", "HOLD"), NONE, NONE}},
     {"RING MOD", {GL(rm_mod, "MOD", 127, K_NUM, CS, "10", "0"), GL(rm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
                   GL(rm_depth, "DEPTH", 127, K_NUM, CW, "10", "0"), GL(rm_a, "ATTACK", 127, K_NUM, CK, "LONG", "SHORT")}},
     {"CHORUS", {GL(rm_d, "R.DECAY", 127, K_NUM, CK, "LONG", "SHORT"), GL(cho_mode, "MODE", 2, K_CHO, CK, "", ""),
@@ -116,7 +118,7 @@ static const page_t PAGES[NPAGE] = {
 /* the pages a button cycles through, for the "2/4" in the header: {first, count} by page */
 static const uint8_t PAGE_GROUP[NPAGE][2] = {
     {PG_HOME, 1}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7},
-    {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 3}, {PG_PLAY, 3}, {PG_PLAY, 3}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7},
+    {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7},
     {PG_MAIN, 2}, {PG_MAIN, 2}};
 static const char *const N_FEET[6] = {"16'", "8'", "5.3'", "4'", "2.7'", "2'"};
 static const char *const N_WAVE[3] = {"SAW", "PULSE", "BOTH"};
@@ -358,7 +360,7 @@ static const sound_t SOUNDS[] = {
 };
 #define NSOUND (sizeof SOUNDS / sizeof SOUNDS[0])
 
-#define SET_MAGIC 0xCFu
+#define SET_MAGIC 0xD0u
 
 /* the user presets: 32 slots of 128 bytes in the bank sector, each a magic, the tones and the patch */
 #define NUSER 32u
@@ -750,6 +752,7 @@ static void draw_monitor(uint32_t sounding, uint32_t at)
     cv_text(0, 15, &FONT_S, "AT", C_LEG);              /* the pressure in effect (the key's or the auto curve's) */
     cv_rect(30, 18, 122, 9, C_SLOT);
     cv_rect(31, 19, (int32_t)at * 120 / 127, 7, CAP[CW]);
+    if (rib256) cv_rect(30 + 61 + rib256 * 60 / (24 * 256), 17, 2, 11, CAP[CY]);   /* the ribbon's bend, centred */
     for (v = 0; v < NV; v++)                           /* the voices */
         cv_rect(164 + (int32_t)v * 9, 8, 6, 14, sounding >> v & 1u ? C_ACC : C_SLOT);
     cv_blit(0, page == PG_HOME ? 196 : 166);
@@ -800,6 +803,8 @@ rest:
 static uint32_t prev_keys, t_change, dirty, lit_drawn = ~0u, status_drawn = ~0u, page_drawn = ~0u, chan_drawn = ~0u, load_drawn;
 static uint32_t strip_drawn = ~0u, strip_ms;
 static uint8_t held[27];                               /* the note each key plays (255: a tone button, not a note) */
+static int32_t rib_pos256;                       /* the ribbon's position, 1/256 semitone */
+static uint32_t rib_ms, rib_tick_ms;              /* when it last moved; the spring's last step */
 static uint32_t home_held, home_used;                  /* HOME is down; a key was pressed under it */
 static uint8_t sustain, sus_held[128 / 8];             /* the pedal, and the notes released under it */
 static int32_t oct(void) { return (int32_t)set.oct_plus2 - 2; }
@@ -853,6 +858,7 @@ static void app_init(void)
         set.aat_off = 0;
         set.sus2 = 0;
         set.rolloff = 100;
+        set.rib_range = 70; set.rib_return = 40;
         patch = INIT_PATCH;
         sound_load(0);
         set.patch = patch;
@@ -900,7 +906,7 @@ static void app_loop(void)
     if (b & (1u << BTN_ENV)) page = page == PG_FENV ? PG_VENV : PG_FENV;
     if (b & (1u << BTN_LFO)) page = page >= PG_SUB && page < PG_AUTO ? page + 1u : PG_SUB;
     if (b & (1u << BTN_FX)) page = page >= PG_RING && page < PG_PHASER ? page + 1u : PG_RING;
-    if (b & (1u << BTN_ARP)) page = page >= PG_PLAY && page < PG_SUS ? page + 1u : PG_PLAY;
+    if (b & (1u << BTN_ARP)) page = page >= PG_PLAY && page < PG_RIB ? page + 1u : PG_PLAY;
     if (b & (1u << BTN_GLO)) page = page == PG_MAIN ? PG_MIDI : PG_MAIN;
     if (b & (1u << BTN_SEL)) { set.chan ^= 1u; changed(); if (page == PG_HOME) page_drawn = ~0u; }
     if (b & (1u << BTN_PLAY)) { sustain_set(!sustain); say(sustain ? "HOLD ON" : "HOLD OFF"); }   /* a sustain latch */
@@ -908,8 +914,20 @@ static void app_loop(void)
     if ((b & (1u << BTN_OCT_DOWN) && fm1_in.buttons >> BTN_OCT_UP & 1u) || (b & (1u << BTN_OCT_UP) && fm1_in.buttons >> BTN_OCT_DOWN & 1u)) {
         sustain_set(0); for (k = 0; k < 128u; k++) voice_off(k); say("ALL NOTES OFF");   /* OCT- with OCT+: panic */
     }
-    if ((n = fm1_enc_take(ENC_SELECT)) != 0)
-        page = (uint32_t)clamp((int32_t)page + n, 0, NPAGE - 1);
+    if ((n = fm1_enc_take(ENC_SELECT)) != 0) {        /* the ribbon: a detent bends RANGE cents, up to two octaves */
+        int32_t step = (int32_t)RIB_CENTS[set.rib_range] * 256 / 100;
+        rib_pos256 = clamp(rib_pos256 + n * step, -24 * 256, 24 * 256);
+        rib_ms = fm1_ms; rib_target256 = rib_pos256;
+    }
+    if (set.rib_return && rib_pos256 && fm1_ms - rib_ms > 150u) {   /* the spring: back to centre, exponentially, once the knob is quiet */
+        uint32_t dt = fm1_ms - rib_tick_ms, tau = (uint32_t)RIB_MS[set.rib_return] / 3u + 1u;
+        if (dt) {
+            int32_t d = (rib_pos256 * (int32_t)(dt > tau ? tau : dt)) / (int32_t)tau;
+            if (!d) d = rib_pos256 > 0 ? 1 : -1;      /* always a step toward centre: it gets there */
+            rib_pos256 -= d; rib_target256 = rib_pos256;
+        }
+    }
+    rib_tick_ms = fm1_ms;
     if ((n = fm1_enc_take(ENC_ALGORITHM)) != 0) {     /* the next tone along the channel's row of buttons */
         uint32_t i, pos = 0;
         for (i = 0; i < 11u; i++)
@@ -1076,7 +1094,7 @@ static void app_loop(void)
     fm1_led_key(BTN_ENV, page == PG_FENV || page == PG_VENV);
     fm1_led_key(BTN_LFO, page >= PG_SUB && page <= PG_AUTO);
     fm1_led_key(BTN_FX, page >= PG_RING && page <= PG_PHASER);
-    fm1_led_key(BTN_ARP, page >= PG_PLAY && page <= PG_SUS);
+    fm1_led_key(BTN_ARP, page >= PG_PLAY && page <= PG_RIB);
     fm1_led_key(BTN_PLAY, sustain);
     fm1_led_key(BTN_SEQ, aat_on);
     fm1_led_key(BTN_GLO, page == PG_MAIN || page == PG_MIDI);

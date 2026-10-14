@@ -28,7 +28,7 @@
   <table>
     <tr><th>Control</th><th>Does</th></tr>
     <tr><td class="k">KNOB 1 – 4</td><td>The four sliders of the page on the screen.</td></tr>
-    <tr><td class="k">SELECT</td><td>Turns the pages, all of them in order.</td></tr>
+    <tr><td class="k">SELECT</td><td>The ribbon: turning it bends the pitch of whatever is sounding and it springs back when you stop (the RIBBON page sets how far and how fast, or makes it hold). The pages are on the buttons.</td></tr>
     <tr><td class="k">PRESETS</td><td>The sounds: the 52 factory sounds, then your 32 user slots.</td></tr>
     <tr><td class="k">ALGORITHM</td><td>Steps along the selected channel's row of tones (see <a href="#tones">tones</a>).</td></tr>
     <tr><td class="k">MASTER</td><td>Volume, after everything.</td></tr>
@@ -38,7 +38,7 @@
     <tr><td class="k">ENV</td><td>VCF EG, then VCA EG.</td></tr>
     <tr><td class="k">LFO</td><td>SUB OSC, SUB OSC 2, TOUCH RESP, AUTO AT.</td></tr>
     <tr><td class="k">FX</td><td>RING MOD, CHORUS, DELAY, DELAY 2, REVERB, REVERB 2, PHASER.</td></tr>
-    <tr><td class="k">ARP</td><td>PERFORM, KEYBOARD, SUSTAIN.</td></tr>
+    <tr><td class="k">ARP</td><td>PERFORM, KEYBOARD, SUSTAIN, RIBBON.</td></tr>
     <tr><td class="k">GLO</td><td>MAIN, then MIDI.</td></tr>
     <tr><td class="k">SAVE</td><td>Saves the panel into a user slot (<a href="#saving">below</a>).</td></tr>
     <tr><td class="k">REC</td><td>MIDI learn (<a href="#midi">below</a>). Lit while waiting.</td></tr>
@@ -80,7 +80,7 @@
     <tr><td class="k">HOME</td><td>TONES</td><td>The tone rows, the sound, BRILL RESO MIX VOLUME.</td></tr>
     <tr><td class="k">EDIT</td><td>VCO · VCO 2 · VCF · VCF EG · VCA EG · VCA · TOUCH</td><td>The selected channel's panel, in the CS-80's section order.</td></tr>
     <tr><td class="k">LFO</td><td>SUB OSC · SUB OSC 2 · TOUCH RESP · AUTO AT</td><td>The sub oscillator, its tremolo and clock sync, the pressure levers, the auto curve.</td></tr>
-    <tr><td class="k">ARP</td><td>PERFORM · KEYBOARD · SUSTAIN</td><td>Portamento, glissando, detune, vintage; keyboard control; sustain mode.</td></tr>
+    <tr><td class="k">ARP</td><td>PERFORM · KEYBOARD · SUSTAIN · RIBBON</td><td>Portamento, glissando, detune, vintage; keyboard control; sustain mode; the ribbon's range and spring.</td></tr>
     <tr><td class="k">FX</td><td>RING MOD · CHORUS · DELAY · DELAY 2 · REVERB · REVERB 2 · PHASER</td><td>The effects.</td></tr>
     <tr><td class="k">GLO</td><td>MAIN · MIDI</td><td>Brilliance, resonance, TONE (the instrument's top-end warmth, an instrument setting rather than part of a sound) and volume; the MIDI settings.</td></tr>
   </table>
@@ -113,7 +113,7 @@
   <p>A sequencer has no hands, so every note can play a pressure curve of its own: it waits <b>DELAY</b>, rises over <b>RISE</b> to <b>LEVEL</b>, holds, and falls over <b>FALL</b> when the key goes. It goes through the same path as real pressure, so A.BRIL, A.LEV and the TOUCH RESP levers all follow it as one gesture, and real pressure or the expression CC still win when higher. <b>SEQ</b> switches it on and off (an AUTO chip on HOME shows it); each sound carries its own curve.</p>
 
   <h2 id="emulator">The emulator</h2>
-  <p>The <a href="emu/">browser emulator</a> runs the firmware itself, against a simulated FM-1, in Chrome or Edge (Web MIDI) or any modern browser (without MIDI). Drag or scroll the knobs, click or touch the keys and buttons, <kbd>Shift</kbd>-click a button to hold it (hold HOME this way and press keys for the tones). The computer keyboard plays: <kbd>Q</kbd>–<kbd>I</kbd> and <kbd>A</kbd>–<kbd>K</kbd> the white keys, the digits the black ones, <kbd>Space</kbd> PLAY, <kbd>Enter</kbd> REC, <kbd>Shift</kbd> SEL, <kbd>Esc</kbd> HOME, <kbd>Z</kbd>/<kbd>X</kbd> the octave, the arrows SELECT and PRESETS. Pick your controller under MIDI in; what arrives is shown beside it. Settings and user presets stay in the browser; export and import move them. What it cannot tell you is how much of the FM-1's time the audio takes: that figure is on the real unit's status line.</p>
+  <p>The <a href="emu/">browser emulator</a> runs the firmware itself, against a simulated FM-1, in Chrome or Edge (Web MIDI) or any modern browser (without MIDI). Drag or scroll the knobs, click or touch the keys and buttons, <kbd>Shift</kbd>-click a button to hold it (hold HOME this way and press keys for the tones). The computer keyboard plays: <kbd>Q</kbd>–<kbd>I</kbd> and <kbd>A</kbd>–<kbd>K</kbd> the white keys, the digits the black ones, <kbd>Space</kbd> PLAY, <kbd>Enter</kbd> REC, <kbd>Shift</kbd> SEL, <kbd>Esc</kbd> HOME, <kbd>Z</kbd>/<kbd>X</kbd> the octave, <kbd>↑</kbd>/<kbd>↓</kbd> the ribbon and <kbd>←</kbd>/<kbd>→</kbd> PRESETS. Pick your controller under MIDI in; what arrives is shown beside it. Settings and user presets stay in the browser; export and import move them. What it cannot tell you is how much of the FM-1's time the audio takes: that figure is on the real unit's status line.</p>
   <footer><small>CS-1 is GPL-3.0; M-VAVE and FM-1 are their owners' marks, CS-80 is Yamaha's. CS-1 is affiliated with none of them.</small></footer>
 </main>
 </body>
