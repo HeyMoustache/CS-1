@@ -102,7 +102,7 @@ group = ""
 for line in block.splitlines():
     g = re.match(r"\s*/\* ---- (.*?) \*/", line)
     if g: group = g.group(1)
-    m = re.search(r'\.name = "([^"]+)", \.tone = \{T_(\w+), T_(\w+)\}', line)
+    m = re.search(r'\.name = "([^"]+)",.*?\.tone = \{T_(\w+), T_(\w+)\}', line)
     if m: sounds.append((group, m.group(1), m.group(2), m.group(3)))
 TONE = {"STR1": "String 1", "STR2": "String 2", "STR3": "String 3", "STR4": "String 4", "BRS1": "Brass 1", "BRS2": "Brass 2", "BRS3": "Brass 3", "FLUTE": "Flute",
         "EPIANO": "Electric Piano", "BASS": "Bass", "CLAV1": "Clavichord 1", "CLAV2": "Clavichord 2", "HARP1": "Harpsichord 1", "HARP2": "Harpsichord 2",
@@ -143,6 +143,12 @@ SOUND_NOTE = {
     "SQUELCH BASS": "Dillinger's squelchy bass.",
     "TRUMPET": "The manual's trumpet: a saw with IL and AL fully apart.", "CLARINET": "The manual's clarinet: a 50 % square into a half-open filter.",
     "OBOE": "The manual's oboe: a 90 % pulse through a narrow bandpass.", "TIMPANI": "The manual's timpani: a noise mallet over a 16' drum.",
+    "TAPE PAD": "Strings 1 + 4 slow, a synced tape echo under a long plate, the phaser drifting: the effects as part of the sound.",
+    "SHIMMER CHOIR": "A flute at 8' with strings an octave up and the sine up: slow, and the plate's shimmer climbing behind it.",
+    "PHASE STRINGS": "Strings 1 + 2 through the phaser at full, feedback high: the seventies string machine.",
+    "ECHO KEYS": "Electric piano with a clavichord edge, a synced ping-pong tape echo and a small plate.",
+    "TAPE BRASS": "Brass 1 + 3 with the tape echo on the beat and the auto after touch leaning in: the Vangelis echo.",
+    "DEEP DRIFT": "Strings over a 16' bass, the voices drifting far, a very slow deep phaser and a dark shimmering plate.",
 }
 
 out = []
