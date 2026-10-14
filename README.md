@@ -3,19 +3,18 @@
 A CS-80-style synthesizer firmware for the M-VAVE FM-1: a sound module for a dawless rig, played over
 MIDI (TRS or USB) from a sequencer such as the Novation Circuit Tracks.
 
-Status: **phases 5 and 6 are in**: 32 user presets (SAVE, pick the slot on ALGO, SAVE), MIDI channel and
-expression-CC settings on a MIDI page, program change for sounds and presets, a CC map (CC 80..83 are the page's
-four knobs, 84..87 brilliance, resonance, vibrato, reverb: the Circuit Tracks' macros), and the effects: a stereo
-delay and a big reverb with a shimmer. Before that, **phase 4**, the performance side: channel II detune, portamento and glissando, the initial pitch
-bend, pressure into the sub oscillator's speed, pitch and filter depth, the ring modulator (mix, rate, an
-attack / decay envelope on the rate), the chorus / tremolo (stereo here). Blade Runner-minded sounds on the ALGO
-encoder come first. Before that, phase 3: the CS-80 voice with the CS-80's preset tones. Eight voices of two channels each (I and
-II), every channel a VCO (sawtooth and / or pulse with PWM, noise), a resonant high-pass and low-pass filter in
-series, a sine added after the filters, a filter envelope (IL, AL, A, D, R), a VCA envelope (A, D, S, R) and the
-touch response (velocity and pressure to brilliance and level); a sub oscillator to pitch, filter and level;
-brilliance and resonance offsets. The 22 preset tones come from the owner's manual's charts (`tools/gen_presets.py`
-says how they were read and mapped); the PRESETS encoder puts one on the channel being edited, ALGO loads a
-two-channel sound (String 1 + Brass 2 and so on). Not yet: preset names.
+CS-1 is a Yamaha CS-80 in spirit: eight voices of two channels each (I and II), every channel a VCO
+(sawtooth and / or pulse with PWM, noise), a resonant high-pass and low-pass filter in series, a sine added after
+the filters, a filter envelope (IL, AL, A, D, R), a VCA envelope (A, D, S, R) and the touch response (velocity
+and pressure to brilliance and level); a sub oscillator to pitch, filter and level; the ring modulator; the
+chorus / tremolo (stereo here); portamento and glissando, channel II detune, the initial pitch bend, keyboard
+control, sustain modes I and II, brilliance and resonance levers, and the SELECT encoder as the ribbon. For a
+sequencer with no hands: an auto after touch curve each note plays by itself, MIDI learn, a CC map for the Circuit
+Tracks' macros, and clock sync. Effects beyond the instrument: a stereo delay with a tape character, a phaser,
+and a Dattorro plate reverb with a shimmer at any interval. The 22 preset tones come from the owner's manual's
+charts (`tools/gen_presets.py` says how they were read and mapped), and the voice was calibrated against a CS-80
+emulation, one dry note at a time (`tools/compare_wav.py`). 52 sounds, 32 user presets, a documentation site with
+the firmware running in the browser, and an installer in the browser.
 
 ## What it stands on
 
@@ -32,10 +31,11 @@ VINTAGE on PERFORM lets each voice drift a few cents on its own, as the voice ca
 
 ## The sounds
 
-ALGO (and program change) runs through these, then the 32 user slots. The classic ones are recipes after what is
-documented about the records (which presets, the technique), not transcriptions; they pair a row I tone with a
-row II tone as the instrument does, and most carry the chorus, a touch of detune and an auto after
-touch curve. They load dry (reverb MIX 0, as the CS-80 had none); each has a reverb size, damping and shimmer ready for MIX.
+PRESETS (and program change) runs through these, then the 32 user slots; HOME + a key picks a tone for a channel,
+ALGO steps along its row. The classic ones are recipes after what is documented about the records (which presets,
+the technique), not transcriptions; they pair a row I tone with a row II tone as the instrument does, and most
+carry the chorus, a touch of detune, an auto after touch curve and the plate. GLASS PIPES is a transcription:
+both panels read off a CS-80 V preset's screen and checked against its takes, the method for the sounds to come.
 
 | | |
 | --- | --- |
@@ -43,7 +43,8 @@ touch curve. They load dry (reverb MIX 0, as the CS-80 had none); each has a rev
 | Toto, Thriller | AFRICA, AFRICA 2 (Syntorial's), ROSANNA, HUMAN NATURE (the chromatic glide), BILLIE JEAN, BILLIE KEYS (Syntorial's) |
 | The eighties | BORN USA, XMAS BASS (the sub oscillator's inverted saw into the filter), WHO BASS, BABOOSHKA, DUCHESS, TURN IT ON, TIME STRINGS, VIENNA, OXYGENE, ENO WASH, WALKING, 4001 PLUCK, 4001 STRINGS, LONG BRASS, SHRIEK LEAD, SQUELCH BASS |
 | The manual's own examples | TRUMPET, CLARINET, OBOE, TIMPANI |
-| Plain pairs | STRINGS 1+2, BRASS 1+2, FLUTE+BASS, ORGANS, CLAVS, HARPSI, E.PIANO, FUNKY 1+2 |
+| The plain pairs | STRINGS 1+2, BRASS 1+2, FLUTE+BASS, ORGANS, CLAVS, HARPSI, E.PIANO, FUNKY 1+2 |
+| With the effects | TAPE PAD, SHIMMER CHOIR, PHASE STRINGS, ECHO KEYS, TAPE BRASS, DEEP DRIFT, GLASS PIPES |
 
 ## Layout
 
