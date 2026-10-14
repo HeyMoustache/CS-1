@@ -801,6 +801,7 @@ rest:
 
 /* ---- the main loop */
 static uint32_t prev_keys, t_change, dirty, lit_drawn = ~0u, status_drawn = ~0u, page_drawn = ~0u, chan_drawn = ~0u, load_drawn;
+static uint32_t content_dirty;                   /* the page's content changed (a sound, a tone, a switch): redraw in place, no clear */
 static uint32_t strip_drawn = ~0u, strip_ms;
 static uint8_t held[27];                               /* the note each key plays (255: a tone button, not a note) */
 static int32_t rib_pos256;                       /* the ribbon's position, 1/256 semitone */
@@ -889,7 +890,7 @@ static void app_loop(void)
         if (down >> k & 1u) {
             if (home_held) {                           /* HOME + a key: a tone button; the lower eleven keys row I, the upper row II */
                 uint32_t row = k >= 16u ? 1u : 0u, pos = k >= 16u ? k - 16u : k;
-                if (pos < 11u) { tone_load(row, TONE_ROW[row][pos]); set.patch = patch; changed(); page_drawn = ~0u; home_used = 1; }
+                if (pos < 11u) { tone_load(row, TONE_ROW[row][pos]); set.patch = patch; changed(); content_dirty = 1u; home_used = 1; }
                 held[k] = 255;
                 continue;
             }
@@ -908,9 +909,9 @@ static void app_loop(void)
     if (b & (1u << BTN_FX)) page = page >= PG_RING && page < PG_PHASER ? page + 1u : PG_RING;
     if (b & (1u << BTN_ARP)) page = page >= PG_PLAY && page < PG_RIB ? page + 1u : PG_PLAY;
     if (b & (1u << BTN_GLO)) page = page == PG_MAIN ? PG_MIDI : PG_MAIN;
-    if (b & (1u << BTN_SEL)) { set.chan ^= 1u; changed(); if (page == PG_HOME) page_drawn = ~0u; }
+    if (b & (1u << BTN_SEL)) { set.chan ^= 1u; changed(); content_dirty = 1u; }
     if (b & (1u << BTN_PLAY)) { sustain_set(!sustain); say(sustain ? "HOLD ON" : "HOLD OFF"); }   /* a sustain latch */
-    if (b & (1u << BTN_SEQ)) { set.aat_off ^= 1u; aat_on = !set.aat_off; changed(); say(aat_on ? "AUTO AT ON" : "AUTO AT OFF"); if (page == PG_HOME) page_drawn = ~0u; }
+    if (b & (1u << BTN_SEQ)) { set.aat_off ^= 1u; aat_on = !set.aat_off; changed(); say(aat_on ? "AUTO AT ON" : "AUTO AT OFF"); content_dirty = 1u; }
     if ((b & (1u << BTN_OCT_DOWN) && fm1_in.buttons >> BTN_OCT_UP & 1u) || (b & (1u << BTN_OCT_UP) && fm1_in.buttons >> BTN_OCT_DOWN & 1u)) {
         sustain_set(0); for (k = 0; k < 128u; k++) voice_off(k); say("ALL NOTES OFF");   /* OCT- with OCT+: panic */
     }
@@ -934,7 +935,7 @@ static void app_loop(void)
             if (TONE_ROW[set.chan][i] == set.tone[set.chan]) pos = i;
         pos = (uint32_t)(((int32_t)pos + n + 44) % 11);
         tone_load(set.chan, TONE_ROW[set.chan][pos]);
-        set.patch = patch; changed(); page_drawn = ~0u;
+        set.patch = patch; changed(); content_dirty = 1u;
     }
     if ((n = fm1_enc_take(ENC_PRESETS)) != 0) {       /* a sound (both channels and the globals), or a user preset */
         uint32_t total = NSOUND + NUSER;
@@ -946,7 +947,7 @@ static void app_loop(void)
             uint32_t i = (uint32_t)(((int32_t)set.sound + n + (int32_t)total * 4) % (int32_t)total);
             sound_or_slot_load(i);
             set.sound = (uint8_t)i;
-            set.patch = patch; changed(); page_drawn = ~0u;
+            set.patch = patch; changed(); content_dirty = 1u;
             say(sound_name(i, nb));
         }
     }
@@ -1003,7 +1004,7 @@ static void app_loop(void)
         else if (m == 0xE0u) bend256 = (((int32_t)d2 << 7 | d1) - 8192) >> 4;   /* +-2 semitones */
         else if (m == 0xC0u && set.pc_on) {                              /* program change: a sound or a user preset */
             char nb[8];
-            if (d1 < NSOUND + NUSER) { sound_or_slot_load(d1); set.sound = d1; set.patch = patch; changed(); page_drawn = ~0u; say(sound_name(d1, nb)); }
+            if (d1 < NSOUND + NUSER) { sound_or_slot_load(d1); set.sound = d1; set.patch = patch; changed(); content_dirty = 1u; say(sound_name(d1, nb)); }
         } else if (m == 0xB0u) {
             uint8_t *tgt = 0;
             if (learn_arm >= 2u && d1 != 120u && d1 != 123u) {   /* bind this CC to the knob chosen */
@@ -1104,7 +1105,15 @@ static void app_loop(void)
     load = audio_cycles / (HALF_FRAMES * 10u * FM1_TICKS_PER_US / (FS / 1000u) + 1u);   /* ~% of the block's time */
     load_now = load;
     wload_now = audio_worker.last_job_ticks / (HALF_FRAMES * 10u * FM1_TICKS_PER_US / (FS / 1000u) + 1u);
-    if (page != page_drawn || set.chan != chan_drawn) { page_drawn = page; chan_drawn = set.chan; load_drawn = load; draw_page(load); lit_drawn = ~0u; tones_drawn = ~0u; }
+    if (page != page_drawn) { page_drawn = page; chan_drawn = set.chan; load_drawn = load; draw_page(load); lit_drawn = ~0u; tones_drawn = ~0u; content_dirty = 0; }
+    else if (content_dirty || set.chan != chan_drawn) {   /* the same page, new content (a sound, a tone, the channel): redrawn over itself, no flash */
+        chan_drawn = set.chan;                          /* the same page, new content: every part redrawn over itself, no flash */
+        content_dirty = 0; load_drawn = load;
+        draw_header(load);
+        if (page == PG_HOME) draw_home(); else { for (k = 0; k < 4u; k++) draw_param(k); }
+        if (page_has_drawing()) draw_shape();
+        lit_drawn = ~0u; tones_drawn = ~0u;
+    }
     else if (load / 5u != load_drawn / 5u) { load_drawn = load; tones_drawn = ~0u; }
     {                                                  /* the strip: the drawing once, the monitor ~20 times a second */
         uint32_t at = 0, key;
