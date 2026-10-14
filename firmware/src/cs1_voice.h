@@ -14,7 +14,7 @@
 #error "HALF_FRAMES must be a multiple of CTL"
 #endif
 
-enum { FT_16 = 0, FT_8, FT_4, FT_2 };                /* feet: the octave of a channel */
+enum { FT_16 = 0, FT_8, FT_53, FT_4, FT_27, FT_2 };  /* feet: the octave of a channel, with the fifths (5 1/3', 2 2/3') between */
 enum { W_SAW = 0, W_PULSE, W_BOTH };                 /* the VCO's wave */
 enum { LW_SINE = 0, LW_TRI, LW_SAW, LW_SAWDN, LW_SQR };   /* the sub oscillator's: sine, triangle, sawtooth, inverted sawtooth, square */
 
@@ -42,6 +42,7 @@ typedef struct {
                                                        * the level, the fall after the key goes */
     uint8_t dly_time, dly_fb, dly_mix, dly_ping, dly_damp;   /* the delay (cs1_fx.h) */
     uint8_t rv_mix, rv_size, rv_damp, rv_shim;        /* the reverb and its shimmer */
+    uint8_t rv_shift;                                 /* the shimmer's interval, semitones (12 = the octave) */
     uint8_t mix;                                      /* the MIX lever: I (0) .. both (64) .. II (127) */
     uint8_t vintage;                                  /* the voices' drift: each wanders a few cents on its own */
     uint8_t dly_sync, lfo_sync;                       /* MIDI clock: the delay's and the sub oscillator's divisions, 0 free */
@@ -194,7 +195,7 @@ static void chan_trigger(chan_state_t *s, const chan_patch_t *p)
 }
 
 /* ---- one channel of one voice, one block */
-static const int8_t FEET_SEMIS[4] = {-12, 0, 12, 24};
+static const int8_t FEET_SEMIS[6] = {-12, 0, 7, 12, 19, 24};
 static void chan_render(voice_t *v, uint32_t ch, int32_t *mix)
 {
     chan_state_t *s = &v->c[ch];

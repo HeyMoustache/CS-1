@@ -66,11 +66,11 @@ typedef struct { const char *name; uint8_t off, max, kind, global, color; const 
 #define NONE {0, 0, 0, 0, 0, 0, 0, 0}
 typedef struct { const char *title; pdesc_t p[4]; } page_t;
 enum { PG_HOME = 0, PG_VCO, PG_VCO2, PG_VCF, PG_FENV, PG_VENV, PG_VCA2, PG_TOUCH,
-       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_PHASER, PG_MAIN, PG_MIDI, NPAGE };
+       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_REVERB2, PG_PHASER, PG_MAIN, PG_MIDI, NPAGE };
 static const page_t PAGES[NPAGE] = {
     {"TONES", {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
                        GL(mix, "MIX", 127, K_NUM, CW, "II", "I"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
-    {"VCO",    {CH(feet, "FEET", 3, K_FEET, CW, "2'", "16'"), CH(wave, "WAVE", 2, K_WAVE, CW, "", ""),
+    {"VCO",    {CH(feet, "FEET", 5, K_FEET, CW, "2'", "16'"), CH(wave, "WAVE", 2, K_WAVE, CW, "", ""),
                 CH(pw, "PW", 127, K_NUM, CG, "90%", "50%"), CH(pwm, "PWM", 127, K_NUM, CG, "10", "0")}},
     {"VCO 2",  {CH(pwm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"), CH(noise, "NOISE", 127, K_NUM, CW, "10", "0"),
                 CH(vcf_lv, "VCF", 127, K_NUM, CS, "10", "0"), CH(sine, "SINE", 127, K_NUM, CS, "10", "0")}},
@@ -105,6 +105,7 @@ static const page_t PAGES[NPAGE] = {
                  GL(dly_sync, "SYNC", 7, K_DIV, CK, "", ""), GL(dly_tape, "TAPE", 127, K_NUM, CY, "10", "0")}},
     {"REVERB", {GL(rv_mix, "MIX", 127, K_NUM, CS, "10", "0"), GL(rv_size, "SIZE", 127, K_NUM, CW, "LONG", "SHORT"),
                 GL(rv_damp, "DAMP", 127, K_NUM, CG, "10", "0"), GL(rv_shim, "SHIMMR", 127, K_NUM, CY, "10", "0")}},
+    {"REVERB 2", {GL(rv_shift, "SHIFT", 24, K_NUM, CY, "24", "1"), NONE, NONE, NONE}},
     {"PHASER", {GL(ph_rate, "RATE", 127, K_NUM, CW, "FAST", "SLOW"), GL(ph_depth, "DEPTH", 127, K_NUM, CG, "10", "0"),
                 GL(ph_fb, "FEEDBK", 127, K_NUM, CR, "10", "0"), GL(ph_mix, "MIX", 127, K_NUM, CS, "10", "0")}},
     {"MAIN",   {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
@@ -115,9 +116,9 @@ static const page_t PAGES[NPAGE] = {
 /* the pages a button cycles through, for the "2/4" in the header: {first, count} by page */
 static const uint8_t PAGE_GROUP[NPAGE][2] = {
     {PG_HOME, 1}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7},
-    {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 3}, {PG_PLAY, 3}, {PG_PLAY, 3}, {PG_RING, 6}, {PG_RING, 6}, {PG_RING, 6}, {PG_RING, 6}, {PG_RING, 6}, {PG_RING, 6},
+    {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 3}, {PG_PLAY, 3}, {PG_PLAY, 3}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7},
     {PG_MAIN, 2}, {PG_MAIN, 2}};
-static const char *const N_FEET[4] = {"16'", "8'", "4'", "2'"};
+static const char *const N_FEET[6] = {"16'", "8'", "5.3'", "4'", "2.7'", "2'"};
 static const char *const N_WAVE[3] = {"SAW", "PULSE", "BOTH"};
 static const char *const N_LWAVE[5] = {"SINE", "TRI", "SAW", "SAW DN", "SQR"};
 static const char *const N_ONOFF[2] = {"OFF", "ON"};
@@ -164,7 +165,7 @@ static const patch_t INIT_PATCH = {                   /* the globals; sound_load
      {FT_8, W_SAW, 0, 0, 40, 0, 0, 127, 110, 0, 0, 127, 0, 64, 64, 0, 40, 40, 20, 60, 127, 50, 0, 0, 0, 0}},
     60, LW_SINE, 0, 0, 0, 64, 64, 100,
     64, 0, 0, 0,  0, 0, 0,  0, 64, 0, 10, 60,  CHO_OFF, 30, 60,  40, 60, 0, 40,  70, 50, 0, 1, 40,  0, 80, 50, 0,  64,  30, 0, 0,  64, 64, 64, 64,
-    .ph_rate = 40, .ph_depth = 64, .ph_fb = 40,
+    .ph_rate = 40, .ph_depth = 64, .ph_fb = 40, .rv_shift = 12,
 };
 
 /* sounds: a tone on each channel and the globals, the way the CS-80's two rows get combined */
@@ -185,6 +186,7 @@ typedef struct {
     uint8_t v_a, v_r;                                 /* 0: the tones' own VCA attack / release, else these on both */
     uint8_t aat_delay, aat_rise, aat_level, aat_fall; /* aat_rise 0 = 60, aat_fall 0 = 40 */
     uint8_t rv_mix, rv_size, rv_damp, rv_shim;        /* rv_size 0 = 80, rv_damp 0 = 50 */
+    uint8_t rv_shift;                                 /* the shimmer's interval in semitones, 0 = 12 */
     uint8_t dly_time, dly_fb, dly_mix, dly_ping;      /* dly_time 0 = 70, dly_fb 0 = 50 */
     uint8_t dly_sync, vintage;                        /* the delay's clock division (0 free); vintage 0 = 30 */
     uint8_t dly_tape;                                 /* the delay's tape character */
@@ -198,6 +200,8 @@ enum { T_STR1 = 0, T_STR2, T_STR3, T_STR4, T_BRS1, T_BRS2, T_FLUTE, T_BRS3, T_EP
 #define F8 (FT_8 + 1)
 #define F4 (FT_4 + 1)
 #define F2 (FT_2 + 1)
+#define F53 (FT_53 + 1)
+#define F27 (FT_27 + 1)
 static const sound_t SOUNDS[] = {
     /* ---- Vangelis */
     {.name = "BLADE BRASS", .rv_mix = 56, .tone = {T_BRS1, T_BRS2}, .level = {115, 115}, .brill = 60, .reso = 70, .detune = 70,
@@ -348,17 +352,17 @@ static const sound_t SOUNDS[] = {
      .lfo_spd = 30, .lfo_vcf = 25, .cho_mode = CHO_CHORUS, .cho_spd = 14, .cho_depth = 80, .v_a = 90, .v_r = 100, .aat_delay = 50, .aat_rise = 80,
      .aat_level = 80, .rv_mix = 60, .rv_size = 110, .rv_damp = 65, .rv_shim = 25, .ph_rate = 8, .ph_depth = 100, .ph_fb = 55, .ph_mix = 70, .vintage = 70,
      .tw = {TWEND}},
-    {.name = "GLASS PIPES", .tone = {T_GLASS1, T_GLASS2}, .feet1 = {F8, F4}, .mix = 102, .brill = 59, .reso = 76, .lfo_spd = 85, .at_vco = 13,
-     .cho_mode = CHO_CHORUS, .cho_spd = 25, .cho_depth = 70, .rv_mix = 40, .rv_size = 85, .rv_damp = 55, .rv_shim = 45,
+    {.name = "GLASS PIPES", .tone = {T_GLASS1, T_GLASS2}, .feet1 = {F8, F53}, .level = {36, 36}, .brill = 59, .reso = 76, .lfo_spd = 85, .at_vco = 13, .rv_shift = 7,
+     .cho_mode = CHO_CHORUS, .cho_spd = 25, .cho_depth = 70, .rv_mix = 70, .rv_size = 85, .rv_damp = 55, .rv_shim = 100,
      .dly_fb = 45, .dly_mix = 45, .dly_ping = 1, .dly_sync = 3, .dly_tape = 30, .tw = {TWEND}},   /* after Arturia's "Glass Pipes": the panels read off its screen */
 };
 #define NSOUND (sizeof SOUNDS / sizeof SOUNDS[0])
 
-#define SET_MAGIC 0xCEu
+#define SET_MAGIC 0xCFu
 
 /* the user presets: 32 slots of 128 bytes in the bank sector, each a magic, the tones and the patch */
 #define NUSER 32u
-#define SLOT_MAGIC 0xA6u
+#define SLOT_MAGIC 0xA7u
 typedef struct { uint8_t magic, tone[2], pad; patch_t patch; } slot_t;
 _Static_assert(sizeof(slot_t) <= 128, "a slot fits 128 bytes");
 static union { slot_t slot[NUSER]; uint8_t raw[NUSER * 128u]; } bank;   /* (the union pads each slot to 128) */
@@ -419,6 +423,7 @@ static void sound_load(uint32_t i)
     patch.rv_size = DEF(sd->rv_size, 80);
     patch.rv_damp = DEF(sd->rv_damp, 50);
     patch.rv_shim = sd->rv_shim;
+    patch.rv_shift = DEF(sd->rv_shift, 12);
     patch.dly_time = DEF(sd->dly_time, 70);
     patch.dly_fb = DEF(sd->dly_fb, 50);
     patch.dly_mix = sd->dly_mix;
@@ -532,7 +537,7 @@ static void fmt_value(const pdesc_t *d, uint32_t v, char *s)   /* up to 6 charac
     const char *src = 0;
     int32_t n = (int32_t)v, i = 0;
     switch (d->kind) {
-    case K_FEET: src = N_FEET[v & 3u]; break;
+    case K_FEET: src = N_FEET[v % 6u]; break;
     case K_WAVE: src = N_WAVE[v > 2u ? 2u : v]; break;
     case K_LWAVE: src = N_LWAVE[v > 4u ? 4u : v]; break;
     case K_ONOFF: src = N_ONOFF[v & 1u]; break;

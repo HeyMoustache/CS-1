@@ -67,6 +67,9 @@ table("DLY_TIME", "uint16_t", [round(FS * 0.01 * (110 ** (i / 127))) for i in ra
 # the phaser's allpass coefficient for a sweep 100 Hz .. 5 kHz (exponential over 128): p = (1 - tan(pi f / fs)) / (1 + tan)
 table("PH_A", "int16_t", [round(32767 * (1 - math.tan(math.pi * 100 * (50 ** (i / 127)) / FS)) / (1 + math.tan(math.pi * 100 * (50 ** (i / 127)) / FS))) for i in range(128)], 8)
 
+# the shimmer's heads run ahead of the write by (2^(s/12) - 1) frames a frame for an interval of s semitones, in 1/256 frame
+table("SHIFT_INC", "uint16_t", [round(256 * (2 ** (i / 12) - 1)) for i in range(25)], 8)
+
 # the plate's decay, applied twice a round of 14930 frames for SIZE 0..127 -> RT60 0.5 .. 25 s
 table("PLATE_D", "uint16_t", [round(32768 * math.exp(-6.908 * 7465 / (0.5 * (50 ** (i / 127)) * FS))) for i in range(128)], 8)
 

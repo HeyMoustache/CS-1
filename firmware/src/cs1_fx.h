@@ -111,7 +111,7 @@ static int16_t rv_ap1l[RV_AP1_L] FM1_POOL, rv_ap1r[RV_AP1_R] FM1_POOL;
 static int16_t rv_d2l[RV_D2_L] FM1_POOL, rv_d2r[RV_D2_R] FM1_POOL;
 #define SH_LEN 8192u                     /* the shimmer's grain: 186 ms, two heads half a grain apart */
 static int16_t sh_line[SH_LEN] FM1_POOL;
-static uint32_t rv_w, sh_w, sh_ph, rv_lfo[2];
+static uint32_t rv_w, sh_w, sh_ph, rv_lfo[2];   /* sh_ph: the heads' position behind the write, in 1/256 frame */
 static int32_t rv_m16[2];                            /* the tank allpasses' modulation this block, in 1/16 frames (stepped once a block) */
 static uint32_t rv_wi[4], rv_wap0[2], rv_wd1[2], rv_wap1[2], rv_wd2[2];   /* each buffer's write index */
 static int32_t rv_bw, rv_lpl, rv_lpr, rv_fbl, rv_fbr;   /* the input bandwidth, the two dampers, the cross-feeds */
@@ -217,14 +217,14 @@ static void fx_reverb(const int32_t *st, int32_t *wet, uint32_t n)   /* st: L R 
           rv_dcxl = l; rv_dcyl = yl; l = yl >> 6; rv_dcxr = r; rv_dcyr = yr; r = yr >> 6; }
         l = soft_knee(l, 20000); r = soft_knee(r, 20000);   /* a loud wash bends rather than slams the master knee */
         if (shim) {                                  /* the shimmer: the output an octave up, back to the input */
-            int32_t m = (l + r) >> 1, a, b, wa;
-            uint32_t da = sh_ph, db = (sh_ph + SH_LEN / 2u) & (SH_LEN - 1u);   /* two heads, half a grain apart */
+            int32_t m = (l + r) >> 1, a, b, wa, fr = (int32_t)(sh_ph & 255u);
+            uint32_t da = sh_ph >> 8, db = (da + SH_LEN / 2u) & (SH_LEN - 1u);   /* two heads, half a grain apart */
             sh_line[sh_w & (SH_LEN - 1u)] = (int16_t)clamp(m, -32767, 32767);
-            a = sh_line[(sh_w - da) & (SH_LEN - 1u)];
-            b = sh_line[(sh_w - db) & (SH_LEN - 1u)];
+            a = sh_line[(sh_w - da) & (SH_LEN - 1u)]; a += ((sh_line[(sh_w - da - 1u) & (SH_LEN - 1u)] - a) * fr) >> 8;
+            b = sh_line[(sh_w - db) & (SH_LEN - 1u)]; b += ((sh_line[(sh_w - db - 1u) & (SH_LEN - 1u)] - b) * fr) >> 8;
             wa = (32767 - sine_i((da << 19) + 0x40000000u)) >> 1;   /* a raised cosine over the grain: the two sum to one */
             sh_fb = mulq15(a, wa) + mulq15(b, 32767 - wa);
-            sh_ph = (sh_ph + SH_LEN - 1u) & (SH_LEN - 1u);   /* the heads run ahead by a frame a frame: an octave up */
+            sh_ph = (sh_ph + (SH_LEN << 8) - SHIFT_INC[patch.rv_shift > 24u ? 24u : patch.rv_shift]) & ((SH_LEN << 8) - 1u);   /* the heads run ahead: the interval */
             sh_w++;
         }
         wet[2u * i] = mulq15(l, mix);

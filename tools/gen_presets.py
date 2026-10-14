@@ -63,8 +63,8 @@ TONES = [
 ROW_I = ["STRING 1", "STRING 3", "BRASS 1", "FLUTE", "ELECTRIC PIANO", "CLAVICHORD 1", "HARPSICHORD 1", "ORGAN 1", "GUITAR 1", "FUNKY 1", "FUNKY 3"]
 # panels read off Arturia CS-80 V presets (sliders 0..10 like the charts): not on the tone rows, used by sounds
 TONES += [
-    ("GLASS 1",        1, 0,  9.5, 10,  10,  0.5, 6.5, 5.0, 3.5, 3.0,   1.5, 10,  1.0, 6.0, 1.5,   10,  5.5, 5.5, 1.0, 10,  5.5, 10,    0.5, 0.5, 2.5, 0.5),
-    ("GLASS 2",        0, 1,  4.5, 0,   1.0, 0.5, 0,   0,   10,  0,     0.5, 0,   0,   0,   0.5,   10,  10,  4.0, 0,   10,  5.0, 10,    0,   0.5, 3.0, 0.5),
+    ("GLASS 1",        1, 0,  9.5, 10,  10,  0.5, 6.5, 5.0, 3.5, 3.0,   1.5, 10,  1.0, 6.0, 1.5,   1.5, 8.0, 5.5, 1.0, 10,  5.5, 10,    0.5, 0.5, 2.5, 0.5),
+    ("GLASS 2",        0, 1,  4.5, 0,   1.0, 0.5, 0,   0,   10,  0,     0.5, 0,   0,   0,   0.5,   0,   10,  4.0, 0,   10,  5.0, 10,    0,   0.5, 3.0, 0.5),
 ]
 ROW_II = ["STRING 2", "STRING 4", "BRASS 2", "BRASS 3", "BASS", "CLAVICHORD 2", "HARPSICHORD 2", "ORGAN 2", "GUITAR 2", "FUNKY 2", "FUNKY 4"]
 # the buttons' colours on the panel: 0 yellow (strings, piano, bass, clavs, harpsichords, guitars), 1 red (brass),
