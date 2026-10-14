@@ -7,6 +7,8 @@ cd "$(dirname "$0")/../.."
 mkdir -p build/site/emu
 cp web/site/*.html build/site/
 cp web/site.css build/site/
+cp web/site/fm1ota.js build/site/
+mkdir -p build/site/firmware && cp web/site/firmware/cs1.fwsc build/site/firmware/
 [ -d web/site/img ] && cp -R web/site/img build/site/
 python3 tools/gen_docs.py > build/site/reference.html
 web/emu/build.sh

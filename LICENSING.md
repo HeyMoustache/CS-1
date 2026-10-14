@@ -13,6 +13,7 @@ complete source under the same licence too.
 | The second core as an audio worker (`firmware/hal/fm1_multicore.h`, `firmware/src/audio_worker.h`, the CPU1 entry in `crt0.S`, the checks in `tools/build.py`, `tests/audio_worker*_test.c`) | PatttF ([FM-106](https://github.com/patttf/fm-106)), after the AC79 SDK (Apache-2.0) |
 | MIDI IN on the TRS jack, `firmware/src/midi_uart.c` | Leo Kuroshita (Felucca), as adapted in FM-106 |
 | The app `firmware/src/cs1.c`, the browser emulator `web/emu/`, the CS-80 voice | twochannels |
+| The browser installer `web/site/fm1ota.js` (Felucca's `web/fm1ota.js`, unchanged) | Leo Kuroshita, Hügelton Instruments |
 
 ## Third-party material
 

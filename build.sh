@@ -17,4 +17,5 @@ PY="${PYTHON:-python3}"
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
     docker info >/dev/null 2>&1 || { echo "build.sh: Docker is not running"; exit 1; }
 fi
-exec "$PY" tools/build.py "$@"
+"$PY" tools/build.py "$@"
+cp build/cs1.fwsc web/site/firmware/cs1.fwsc && echo "site: web/site/firmware/cs1.fwsc refreshed (the install page serves it)"
