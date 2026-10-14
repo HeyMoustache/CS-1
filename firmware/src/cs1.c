@@ -718,7 +718,7 @@ static void draw_monitor(uint32_t sounding, uint32_t at)
         cv_rect(164 + (int32_t)v * 9, 8, 6, 14, sounding >> v & 1u ? C_ACC : C_SLOT);
     cv_blit(0, page == PG_HOME ? 196 : 166);
 }
-static uint32_t load_now;
+static uint32_t load_now, wload_now;
 static void draw_status(int32_t oct, uint32_t nvoices)    /* the tones (or a message), the octave, the voices, the load */
 {
     char s[32];
@@ -752,7 +752,9 @@ rest:
         t[9] = (char)('0' + nvoices);
         if (load_now) {                                /* the audio's share of its budget (the device only) */
             uint32_t l = load_now > 99u ? 99u : load_now;
-            t[17] = ' '; t[18] = ' '; t[19] = l >= 10u ? (char)('0' + l / 10u) : ' '; t[20] = (char)('0' + l % 10u); t[21] = '%'; t[22] = 0;
+            uint32_t w = wload_now > 99u ? 99u : wload_now;   /* the block (CPU0, with its wait) / the worker's job (CPU1) */
+            t[16] = ' '; t[17] = l >= 10u ? (char)('0' + l / 10u) : ' '; t[18] = (char)('0' + l % 10u); t[19] = '/';
+            t[20] = w >= 10u ? (char)('0' + w / 10u) : ' '; t[21] = (char)('0' + w % 10u); t[22] = '%'; t[23] = 0;
         }
         text_box(0, 224, 240, t, C_LEG, 1);
     }
@@ -1047,6 +1049,7 @@ static void app_loop(void)
 
     load = audio_cycles / (HALF_FRAMES * 10u * FM1_TICKS_PER_US / (FS / 1000u) + 1u);   /* ~% of the block's time */
     load_now = load;
+    wload_now = audio_worker.last_job_ticks / (HALF_FRAMES * 10u * FM1_TICKS_PER_US / (FS / 1000u) + 1u);
     if (page != page_drawn || set.chan != chan_drawn) { page_drawn = page; chan_drawn = set.chan; load_drawn = load; draw_page(load); lit_drawn = ~0u; tones_drawn = ~0u; }
     else if (load / 5u != load_drawn / 5u) { load_drawn = load; tones_drawn = ~0u; }
     {                                                  /* the strip: the drawing once, the monitor ~20 times a second */

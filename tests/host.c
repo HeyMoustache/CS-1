@@ -97,7 +97,7 @@ static void write_wav(void)
     fwrite(wav, 4, wav_n, f);
     fclose(f);
     printf("sound  -> %s (%u frames)\n", name, wav_n);
-    printf("meters: voices %d, after chorus %d, after delay %d, after reverb %d (of 32767); reverb lines over 120000: %u samples\n",
+    printf("meters: voices %d, after chorus %d, after delay %d, after reverb %d (of 32767); reverb tanks near the 16-bit edge: %u samples\n",
            dbg_peak[0], dbg_peak[1], dbg_peak[2], dbg_peak[3], rv_hot);
 }
 
