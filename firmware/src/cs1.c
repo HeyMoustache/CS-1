@@ -194,42 +194,42 @@ enum { T_STR1 = 0, T_STR2, T_STR3, T_STR4, T_BRS1, T_BRS2, T_FLUTE, T_BRS3, T_EP
 static const sound_t SOUNDS[] = {
     /* ---- Vangelis */
     {.name = "BLADE BRASS", .tone = {T_BRS1, T_BRS2}, .level = {115, 115}, .brill = 60, .reso = 70, .detune = 70,
-     .porta = 18, .at_vco = 80, .at_brill = 90, .cho_mode = CHO_CHORUS, .cho_spd = 22, .cho_depth = 70, .v_a = 62,
+     .porta = 18, .at_vco = 30, .at_brill = 90, .cho_mode = CHO_CHORUS, .cho_spd = 22, .cho_depth = 70, .v_a = 62,
      .aat_delay = 50, .aat_rise = 70, .aat_level = 100, .rv_size = 100, .tw = {TWEND}},
     {.name = "BR BLUES", .tone = {T_STR3, T_BRS3}, .feet1 = {F4, F8}, .level = {110, 95}, .brill = 70, .reso = 68, .detune = 72,
-     .porta = 30, .at_vco = 90, .at_brill = 70, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 75, .v_a = 40, .v_r = 80,
+     .porta = 30, .at_vco = 34, .at_brill = 70, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 75, .v_a = 40, .v_r = 80,
      .aat_delay = 45, .aat_rise = 65, .aat_level = 110, .aat_fall = 60, .rv_size = 115, .rv_shim = 25,
      .dly_time = 84, .dly_fb = 45, .dly_mix = 30, .dly_ping = 1, .dly_sync = 6, .tw = {TW(0, lp_cut, 100), TW(1, lp_cut, 90), TWEND}},
     {.name = "BR FLUTE", .tone = {T_FLUTE, T_ORG2}, .feet1 = {F8, F16}, .level = {115, 60}, .brill = 60, .detune = 68,
-     .porta = 60, .at_vco = 60, .at_brill = 40, .cho_mode = CHO_CHORUS, .cho_spd = 16, .cho_depth = 70, .v_a = 48,
+     .porta = 60, .at_vco = 22, .at_brill = 40, .cho_mode = CHO_CHORUS, .cho_spd = 16, .cho_depth = 70, .v_a = 48,
      .aat_delay = 60, .aat_rise = 75, .aat_level = 70, .aat_fall = 50, .rv_size = 100,
      .dly_time = 90, .dly_fb = 50, .dly_mix = 45, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
     {.name = "BR STRINGS", .tone = {T_STR1, T_STR2}, .feet1 = {F8, F16}, .level = {115, 90}, .brill = 56, .reso = 66, .detune = 72,
-     .porta = 22, .at_vco = 50, .at_brill = 50, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 85, .v_a = 85, .v_r = 95,
+     .porta = 22, .at_vco = 19, .at_brill = 50, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 85, .v_a = 85, .v_r = 95,
      .aat_delay = 55, .aat_rise = 80, .aat_level = 90, .aat_fall = 60, .rv_size = 118, .rv_shim = 30, .tw = {TWEND}},
     {.name = "CHARIOTS", .tone = {T_BRS1, T_BRS3}, .level = {115, 105}, .brill = 72, .reso = 66, .detune = 70,
-     .porta = 10, .at_vco = 85, .at_brill = 80, .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 55, .v_a = 30,
+     .porta = 10, .at_vco = 32, .at_brill = 80, .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 55, .v_a = 30,
      .aat_delay = 40, .aat_rise = 55, .aat_level = 95, .rv_size = 95,
      .dly_time = 96, .dly_fb = 55, .dly_mix = 50, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
     {.name = "UNKNOWN MAN", .tone = {T_BRS1, T_STR2}, .level = {115, 80}, .brill = 66, .reso = 64, .detune = 69,
-     .porta = 26, .at_vco = 95, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 60, .v_a = 36,
+     .porta = 26, .at_vco = 36, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 60, .v_a = 36,
      .aat_delay = 40, .aat_rise = 60, .aat_level = 100, .rv_size = 100, .dly_time = 100, .dly_fb = 40, .dly_mix = 35, .dly_sync = 3, .tw = {TWEND}},
     /* Syntorial's Blade Runner brass: two 50 % pulses an octave apart, 6 cents off, PWM at ~4 Hz, a 650 ms filter
      * swell that takes 10 s to fall, the amplifier at 250 ms / 1.9 s / 40 % / 750 ms, a big reverb at 10 % */
     {.name = "BR BRASS 2", .tone = {T_BRS1, T_BRS2}, .feet1 = {F8, F4}, .level = {115, 85}, .brill = 64, .reso = 64, .detune = 56,
-     .at_vco = 70, .at_brill = 70, .rv_size = 100, .aat_delay = 50, .aat_rise = 70, .aat_level = 80,
+     .at_vco = 26, .at_brill = 70, .rv_size = 100, .aat_delay = 50, .aat_rise = 70, .aat_level = 80,
      .tw = {TW(2, wave, W_PULSE), TW(2, pw, 0), TW(2, pwm, 100), TW(2, pwm_spd, 78), TW(2, lp_cut, 95), TW(2, lp_res, 19),
             TW(2, f_il, 64), TW(2, f_al, 82), TW(2, f_a, 88), TW(2, f_d, 124), TW(2, f_r, 124), TW(2, v_a, 75)}},
     /* the brass swell as MusicTech builds it: two saws 60 / 40 a couple of cents apart, the filter envelope a third
      * of the range over a second, long decay and release; a tape delay with high feedback and a 10 s reverb */
     {.name = "BRASS SWELL", .tone = {T_BRS1, T_BRS2}, .level = {118, 95}, .brill = 60, .reso = 62, .detune = 67,
-     .at_vco = 50, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 40, .v_a = 55, .v_r = 100,
+     .at_vco = 19, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 40, .v_a = 55, .v_r = 100,
      .aat_delay = 40, .aat_rise = 80, .aat_level = 90, .rv_size = 100,
      .dly_time = 95, .dly_fb = 70, .dly_mix = 35, .dly_ping = 1,
      .dly_sync = 4, .tw = {TW(2, f_il, 64), TW(2, f_al, 104), TW(2, f_a, 94), TW(2, f_d, 120), TW(2, f_r, 120), TW(2, v_s, 120)}},
     /* Blade Runner Blues as a forum player had it on the Arturia: Brass 1 + 2 with the performance side up */
     {.name = "BR BLUES 2", .tone = {T_BRS1, T_BRS2}, .level = {115, 110}, .brill = 66, .reso = 66, .detune = 70,
-     .porta = 24, .at_vco = 90, .at_brill = 110, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 70, .v_a = 36, .v_r = 85,
+     .porta = 24, .at_vco = 34, .at_brill = 110, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 70, .v_a = 36, .v_r = 85,
      .aat_delay = 40, .aat_rise = 60, .aat_level = 115, .aat_fall = 60, .rv_size = 115,
      .dly_time = 84, .dly_fb = 45, .dly_mix = 30, .dly_ping = 1, .dly_sync = 6, .tw = {TWEND}},
     /* the End Titles' sequenced bass: two saws an octave apart, the filter under an envelope; no chorus */
@@ -264,7 +264,7 @@ static const sound_t SOUNDS[] = {
     {.name = "WHO BASS", .tone = {T_BASS, T_BASS}, .feet1 = {F16, F8}, .level = {120, 90}, .brill = 70, .reso = 90, .detune = 66,
      .rv_size = 60, .tw = {TW(2, lp_res, 90), TW(2, f_al, 100), TW(2, f_d, 60), TWEND}},
     {.name = "BABOOSHKA", .tone = {T_FLUTE, T_ORG2}, .level = {118, 55}, .brill = 66, .detune = 67,
-     .porta = 40, .at_vco = 70, .at_brill = 30, .lfo_spd = 66, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 50,
+     .porta = 40, .at_vco = 26, .at_brill = 30, .lfo_spd = 66, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 50,
      .v_a = 20, .aat_delay = 45, .aat_rise = 60, .aat_level = 80, .rv_size = 80, .dly_time = 80, .dly_fb = 35, .dly_mix = 25, .dly_sync = 3, .tw = {TWEND}},
     {.name = "DUCHESS", .tone = {T_STR3, T_STR4}, .level = {115, 110}, .brill = 60, .reso = 64, .detune = 70,
      .porta = 45, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 80, .v_a = 70, .v_r = 85, .rv_size = 100, .tw = {TWEND}},
@@ -291,11 +291,11 @@ static const sound_t SOUNDS[] = {
      .lfo_spd = 78, .lfo_vco = 20, .cho_mode = CHO_CHORUS, .cho_spd = 22, .cho_depth = 60, .v_a = 64, .v_r = 90,
      .rv_size = 95, .tw = {TW(2, lp_cut, 127), TW(2, hp_cut, 0), TWEND}},
     {.name = "LONG BRASS", .tone = {T_BRS2, T_BRS3}, .level = {112, 112}, .brill = 60, .reso = 66, .detune = 70,
-     .at_vco = 60, .at_brill = 100, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 60, .v_a = 95, .v_r = 90,
+     .at_vco = 22, .at_brill = 100, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 60, .v_a = 95, .v_r = 90,
      .aat_delay = 70, .aat_rise = 100, .aat_level = 110, .aat_fall = 70, .rv_size = 110,
      .dly_time = 104, .dly_fb = 55, .dly_mix = 40, .dly_ping = 1, .dly_sync = 5, .tw = {TWEND}},
     {.name = "SHRIEK LEAD", .tone = {T_FNK3, T_FNK1}, .feet1 = {F2, F4}, .level = {115, 90}, .brill = 80, .reso = 96, .detune = 70,
-     .porta = 20, .at_vco = 90, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 30, .cho_depth = 50,
+     .porta = 20, .at_vco = 34, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 30, .cho_depth = 50,
      .rv_size = 100, .dly_time = 90, .dly_fb = 50, .dly_mix = 35, .tw = {TWEND}},
     {.name = "SQUELCH BASS", .tone = {T_FNK1, T_BASS}, .feet1 = {F16, F16}, .level = {110, 110}, .brill = 60, .reso = 100, .detune = 66,
      .rv_size = 50, .tw = {TW(2, f_a, 0), TW(2, f_d, 50), TW(2, v_r, 35), TWEND}},
@@ -367,7 +367,7 @@ static void sound_load(uint32_t i)
     patch.gliss = sd->gliss;
     patch.pbend = sd->pbend;
     patch.at_spd = 0;
-    patch.at_vco = sd->at_vco;
+    patch.at_vco = DEF(sd->at_vco, 30);
     patch.at_vcf = sd->at_vcf;
     patch.lfo_wave = sd->lfo_wave;
     patch.lfo_spd = DEF(sd->lfo_spd, 60);

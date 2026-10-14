@@ -319,7 +319,7 @@ static void voices_render(uint32_t lo, uint32_t hi, int32_t *mix)
                 w->pitch256 = ((w->pitch256 + 128) & ~255) ;
         } else
             w->pitch256 = target;
-        w->pb256 -= w->pb256 >> 3;                     /* the initial bend slides up to pitch (~50 ms) */
+        w->pb256 -= w->pb256 >> 4;                     /* the initial bend slides up to pitch: a block a block, ~300 ms */
         auto_at_block(w);
         if (patch.vintage) {                           /* the drift: towards a point a few cents off, picked afresh now
                                                         * and then; VINTAGE 127 is +-12 cents. In 1/65536 semitone */
