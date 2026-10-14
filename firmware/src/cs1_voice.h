@@ -412,7 +412,10 @@ static void chorus(const int32_t *mix, int32_t *out, uint32_t n)
 static int32_t g_st[2u * HALF_FRAMES];   /* the stereo sum through the effects */
 
 /* ---- the block: CPU0 prepares, CPU1 (when there) renders the upper half, CPU0 the lower, then the sum */
-static void worker_render(void *ctx) { (void)ctx; voices_render(NV / 2u, NV, g_mix[1]); }
+/* the reverb runs on the worker one block behind: its input is the last block's sum (rv_src), its output waits in
+ * rv_wet for this block. 5.8 ms more pre-delay, and the plate's cost leaves CPU0. Without a worker it runs inline. */
+static int32_t rv_src[2u * HALF_FRAMES], rv_wet[2u * HALF_FRAMES];
+static void worker_render(void *ctx) { (void)ctx; voices_render(NV / 2u, NV, g_mix[1]); fx_reverb(rv_src, rv_wet, HALF_FRAMES); }
 static uint32_t audio_cycles;             /* ticks the last block took (the UI's load meter) */
 static volatile int32_t out_peak;         /* the last block's output peak (after the master knee) */
 
@@ -450,7 +453,12 @@ static void voices_block(int32_t *out, uint32_t n)
     dbg_meter(1, g_st, 2u * HALF_FRAMES);
     fx_delay(g_st, HALF_FRAMES);
     dbg_meter(2, g_st, 2u * HALF_FRAMES);
-    fx_reverb(g_st, HALF_FRAMES);
+    if (submitted) {                                /* the worker made this block's wet from the last block's sum */
+        for (i = 0; i < 2u * HALF_FRAMES; i++) { rv_src[i] = g_st[i]; g_st[i] += rv_wet[i]; }
+    } else {
+        fx_reverb(g_st, rv_wet, HALF_FRAMES);
+        for (i = 0; i < 2u * HALF_FRAMES; i++) g_st[i] += rv_wet[i];
+    }
     dbg_meter(3, g_st, 2u * HALF_FRAMES);
     {
         int32_t pk = 0;

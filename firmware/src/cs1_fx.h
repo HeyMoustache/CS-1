@@ -103,13 +103,13 @@ static inline int32_t delay32(int32_t *z, uint32_t len, uint32_t *w, int32_t x)
 }
 #define TAP(z, len, w, back) ((z)[wrap_back((w), (len), (back))])
 
-static void fx_reverb(int32_t *st, uint32_t n)
+static void fx_reverb(const int32_t *st, int32_t *wet, uint32_t n)   /* st: L R ... in; wet: L R ... out (the wet alone) */
 {
     uint32_t i;
     int32_t decay = PLATE_D[patch.rv_size], mix = patch.rv_mix * 258, damp = 32767 - patch.rv_damp * 150;
     int32_t shim = patch.rv_shim * 240;          /* 0 .. 0.93 of the loop's unity gain (below) */
     int32_t in_g;
-    if (!mix && !shim) return;
+    if (!mix && !shim) { for (i = 0; i < 2u * n; i++) wet[i] = 0; return; }
     /* a sustained input builds up ~1 / (1 - decay) in the tanks: the input is scaled by the loss so a held chord sits
      * at the same level whatever the SIZE (a tail then starts quieter the longer it is to last) */
     in_g = clamp((32768 - decay) * 7, 0, 32767);
@@ -171,7 +171,7 @@ static void fx_reverb(int32_t *st, uint32_t n)
             sh_ph = (sh_ph + SH_LEN - 1u) & (SH_LEN - 1u);   /* the heads run ahead by a frame a frame: an octave up */
             sh_w++;
         }
-        st[2u * i] += mulq15(l, mix);
-        st[2u * i + 1u] += mulq15(r, mix);
+        wet[2u * i] = mulq15(l, mix);
+        wet[2u * i + 1u] = mulq15(r, mix);
     }
 }
