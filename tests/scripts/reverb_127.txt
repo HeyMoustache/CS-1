@@ -1,0 +1,17 @@
+50 btn 11
+100 midi 0xC0 38 0
+150 btn 2
+160 btn 2
+170 btn 2
+180 btn 2
+190 btn 2
+200 midi 0xB0 80 127
+210 midi 0xB0 81 127
+220 midi 0xB0 82 40
+500 midi 0x90 60 100
+520 midi 0x90 64 100
+540 midi 0x90 67 100
+1000 midi 0x80 60 0
+1000 midi 0x80 64 0
+1000 midi 0x80 67 0
+30000 end

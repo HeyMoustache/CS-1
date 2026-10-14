@@ -64,7 +64,8 @@ table("RM_INC", "uint32_t", [round(0.5 * (4000 ** (i / 127)) * 2 ** 32 / FS) for
 # the delay's time: knob 0..127 -> 10 ms .. 1.1 s exponential, in frames
 table("DLY_TIME", "uint16_t", [round(FS * 0.01 * (110 ** (i / 127))) for i in range(128)], 8)
 # the reverb's feedback for a 2000-frame line: SIZE 0..127 -> a decay (T60) of 0.5 .. 25 s, Q15
-table("REV_G", "uint16_t", [round(32768 * math.exp(-6.908 * 2000 / (0.5 * (50 ** (i / 127)) * FS))) for i in range(128)], 8)
+# the plate's decay, applied twice a round of 14930 frames for SIZE 0..127 -> RT60 0.5 .. 25 s
+table("PLATE_D", "uint16_t", [round(32768 * math.exp(-6.908 * 7465 / (0.5 * (50 ** (i / 127)) * FS))) for i in range(128)], 8)
 
 Path(__file__).resolve().parents[1].joinpath("firmware/gen/cs1_tables.h").write_text("\n".join(out) + "\n")
 print("firmware/gen/cs1_tables.h written")

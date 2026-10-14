@@ -7,6 +7,7 @@
 #include "cs1_tables.h"
 
 static inline int32_t mulq15(int32_t a, int32_t b) { return (a * b) >> 15; }
+static inline int32_t mulq15r(int32_t a, int32_t b) { return (a * b + 16384) >> 15; }   /* rounded: no limit cycles in loops */
 static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
 
 /* a sine of the phase, linearly interpolated between the 1024 table points */
