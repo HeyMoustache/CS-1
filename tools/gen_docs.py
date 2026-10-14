@@ -48,7 +48,7 @@ PAGE_NOTE = {
     "DELAY": "A stereo delay, with SYNC overriding TIME in note divisions of the MIDI clock.",
     "DELAY 2": "The delay's ping-pong, the damping in its feedback, its sync, and the tempo the clock gives.",
     "REVERB": "A hall with a shimmer: the reverb's output fed back an octave up.",
-    "MAIN": "The lower panel's levers: brilliance and resonance offsets for every filter, the MIX between channel I and II, the output level.",
+    "MAIN": "The lower panel's levers: brilliance and resonance offsets for every filter, TONE, the output level. TONE is an instrument setting rather than part of a sound.",
     "MIDI": "The channel listened to, which CC acts as pressure, program change on or off, and the learned CC bindings (turn down to clear).",
 }
 DESC = {
@@ -87,7 +87,7 @@ DESC = {
     ("DELAY 2", "SYNC"): "As on the DELAY page.", ("DELAY 2", "TEMPO"): "The tempo the clock gives, in brackets when no clock has arrived for two seconds (120 at power-on).",
     ("REVERB", "MIX"): "The reverb's level; 0 is off.", ("REVERB", "SIZE"): "The decay, half a second to about 25 s.",
     ("REVERB", "DAMP"): "Darkens the tail.", ("REVERB", "SHIMMR"): "Feeds the tail back an octave up: it climbs in octaves. Its loop never runs away.",
-    ("MAIN", "BRILL"): "As on HOME.", ("MAIN", "RESO"): "As on HOME.", ("MAIN", "MIX"): "As on HOME.", ("MAIN", "VOLUME"): "As on HOME.",
+    ("MAIN", "BRILL"): "As on HOME.", ("MAIN", "RESO"): "As on HOME.", ("MAIN", "TONE"): "A gentle 12 dB per octave roll-off above the filters, as the instrument's output stage has it: off at 0, 2.4 kHz at 100 (the CS-80 V's, measured), 1.6 kHz at full. It takes the glass off the sawtooth; BRILL on HOME still opens the filters under it.", ("MAIN", "VOLUME"): "As on HOME.",
     ("MIDI", "CHAN"): "OMNI, or a channel 1 to 16.", ("MIDI", "EXPR"): "AT only, or a CC number that also acts as pressure (CC 1 by default).",
     ("MIDI", "PROG"): "Program change on or off.", ("MIDI", "LEARNS"): "How many CCs are bound to parameters; turn it down to 0 to clear them.",
 }

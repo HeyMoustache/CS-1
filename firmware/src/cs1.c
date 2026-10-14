@@ -49,6 +49,7 @@ typedef struct {                                      /* what survives a power-o
     uint8_t nlearn;                                  /* MIDI learn: CCs bound to parameters (REC, a knob, a CC) */
     uint8_t aat_off;                                 /* the auto after touch switched off (SEQ) */
     uint8_t sus2;                                    /* SUSTAIN II: a new chord ends the sustain of the one before */
+    uint8_t rolloff;                                 /* TONE: the fixed roll-off above the filters (0 = off, 100 = the CS-80 V's) */
     struct { uint8_t cc, page, knob; } learn[16];
     patch_t patch;
 } settings_t;
@@ -68,7 +69,7 @@ enum { PG_HOME = 0, PG_VCO, PG_VCO2, PG_VCF, PG_FENV, PG_VENV, PG_VCA2, PG_TOUCH
        PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_MAIN, PG_MIDI, NPAGE };
 static const page_t PAGES[NPAGE] = {
     {"TONES", {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
-                       GL(mix, "MIX", 127, K_NUM, CW, "II", "I"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
+                       ST(rolloff, "TONE", 127, K_NUM, CY, "WARM", "OPEN"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
     {"VCO",    {CH(feet, "FEET", 3, K_FEET, CW, "2'", "16'"), CH(wave, "WAVE", 2, K_WAVE, CW, "", ""),
                 CH(pw, "PW", 127, K_NUM, CG, "90%", "50%"), CH(pwm, "PWM", 127, K_NUM, CG, "10", "0")}},
     {"VCO 2",  {CH(pwm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"), CH(noise, "NOISE", 127, K_NUM, CW, "10", "0"),
@@ -324,7 +325,7 @@ static const sound_t SOUNDS[] = {
 };
 #define NSOUND (sizeof SOUNDS / sizeof SOUNDS[0])
 
-#define SET_MAGIC 0xCCu
+#define SET_MAGIC 0xCDu
 
 /* the user presets: 32 slots of 128 bytes in the bank sector, each a magic, the tones and the patch */
 #define NUSER 32u
@@ -813,6 +814,7 @@ static void app_init(void)
         set.nlearn = 0;
         set.aat_off = 0;
         set.sus2 = 0;
+        set.rolloff = 100;
         patch = INIT_PATCH;
         sound_load(0);
         set.patch = patch;
@@ -820,6 +822,7 @@ static void app_init(void)
     patch = set.patch;
     loaded = patch;                                    /* (after a power-off the panel as kept is the reference) */
     aat_on = !set.aat_off;
+    tone_set = set.rolloff;
     bank_ok = bank_load(bank.raw, sizeof bank.raw) == 0;
     if (!bank_ok) { uint32_t i; for (i = 0; i < NUSER; i++) slot_at(i)->magic = 0; }
     lcd_fill(0, 0, 240, 240, C_PANEL);
@@ -827,6 +830,7 @@ static void app_init(void)
 
 static void app_loop(void)
 {
+    tone_set = set.rolloff;
     uint32_t keys, down, up, rel, b, k, lit = 0, sounding, nv = 0, load;
     uint32_t base = (uint32_t)(KEY0 + 12 * oct());
     uint8_t st, d1, d2;

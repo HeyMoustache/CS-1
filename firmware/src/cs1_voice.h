@@ -83,6 +83,10 @@ static voice_t voices[NV];
 static volatile int32_t bend256;        /* pitch bend, 1/256 semitone (the main loop's) */
 static volatile uint32_t rm_trig;       /* counts up on every note-on: the ring modulator's envelope restarts */
 static volatile uint8_t aat_on = 1;     /* the auto after touch's switch (the main loop's) */
+static volatile uint8_t tone_set = 100; /* TONE: a fixed 12 dB/octave roll-off on the dry sum, as the instrument's output has it:
+                                         * 0 off, 100 = 2.4 kHz as measured on the CS-80 V, 127 = 1.6 kHz (the main loop's) */
+static svf_t tone_c;
+static int32_t tone_s1, tone_s2;
 static volatile uint32_t sync_dly;      /* the delay's time from the MIDI clock, in frames (the main loop's) */
 static volatile uint32_t sync_lfo;      /* the sub oscillator's phase step a tick from the MIDI clock */
 static volatile uint32_t lfo_reset;     /* counts up on MIDI start: the sub oscillator restarts its cycle */
@@ -423,8 +427,12 @@ static void voices_block(int32_t *out, uint32_t n)
         for (i = 0; i < HALF_FRAMES; i++)
             g_mix[0][i] += g_mix[1][i];
     }
+    if (tone_set)
+        svf_coef(&tone_c, 135 * 16 - (int32_t)tone_set * 6, 4551);   /* MIDI 135 - 0.375 a unit, Q 0.9 */
     for (i = 0; i < HALF_FRAMES; i++) {
-        g_mix[0][i] = mulq15(soft_knee(g_mix[0][i] >> 2, 14000), vol);   /* the dry sum: -7 dBFS and a knee */
+        int32_t x = g_mix[0][i] >> 2, lp, hp;
+        if (tone_set) { svf_step(&tone_c, x, &tone_s1, &tone_s2, &lp, &hp); x = lp; }
+        g_mix[0][i] = mulq15(soft_knee(x, 14000), vol);   /* the dry sum: -7 dBFS, the TONE roll-off and a knee */
         g_st[2u * i] = g_st[2u * i + 1u] = 0;
     }
     ring_mod(g_mix[0], HALF_FRAMES);                /* after the knee: the sum of eight voices would overflow its products */
