@@ -69,7 +69,7 @@ enum { PG_HOME = 0, PG_VCO, PG_VCO2, PG_VCF, PG_FENV, PG_VENV, PG_VCA2, PG_TOUCH
        PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_MAIN, PG_MIDI, NPAGE };
 static const page_t PAGES[NPAGE] = {
     {"TONES", {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
-                       ST(rolloff, "TONE", 127, K_NUM, CY, "WARM", "OPEN"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
+                       GL(mix, "MIX", 127, K_NUM, CW, "II", "I"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
     {"VCO",    {CH(feet, "FEET", 3, K_FEET, CW, "2'", "16'"), CH(wave, "WAVE", 2, K_WAVE, CW, "", ""),
                 CH(pw, "PW", 127, K_NUM, CG, "90%", "50%"), CH(pwm, "PWM", 127, K_NUM, CG, "10", "0")}},
     {"VCO 2",  {CH(pwm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"), CH(noise, "NOISE", 127, K_NUM, CW, "10", "0"),
@@ -106,7 +106,7 @@ static const page_t PAGES[NPAGE] = {
     {"REVERB", {GL(rv_mix, "MIX", 127, K_NUM, CS, "10", "0"), GL(rv_size, "SIZE", 127, K_NUM, CW, "LONG", "SHORT"),
                 GL(rv_damp, "DAMP", 127, K_NUM, CG, "10", "0"), GL(rv_shim, "SHIMMR", 127, K_NUM, CY, "10", "0")}},
     {"MAIN",   {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
-                GL(mix, "MIX", 127, K_NUM, CW, "II", "I"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
+                ST(rolloff, "TONE", 127, K_NUM, CY, "WARM", "OPEN"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
     {"MIDI",   {ST(midi_chan, "CHAN", 16, K_MCHAN, CW, "16", "OMNI"), ST(expr, "EXPR", 127, K_EXPR, CW, "CC", "AT"),
                 ST(pc_on, "PROG", 1, K_ONOFF, CK, "", ""), ST(nlearn, "LEARNS", 16, K_NUM, CK, "", "")}},
 };

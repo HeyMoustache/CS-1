@@ -19,12 +19,13 @@ The mapping, with the assumptions it makes (tune these against recordings, not t
   - 0..10 is 0..127 for levels, the HPF cutoff, resonances, depths and the touch sliders.
   - The LPF slider was calibrated against a CS-80 emulation (Arturia CS-80 V, dry, C3): 1.5 rests at about 680 Hz,
     2.5 at 660 Hz (under +9 dB of resonance), 4.0 and 6.0 above a fixed roll-off near 2.3 kHz. The sine slider's
-    0.5 lifts the fundamental by 4 dB there, so the chart's sine is placed on a 0.4-power curve (0.5 -> 38, 8 -> 116). A line through
-    1.5 -> MIDI 76.5 and 4.0 -> MIDI 98.5 at C3: MIDI 63 + 8.8 a unit, 10 = open. The filters track the keyboard 1:1.
+    0.5 lifts the fundamental by 4 dB there, so the chart's sine is placed on a 0.4-power curve (0.5 -> 38, 8 -> 116). So the scale is flat at the bottom and steep in the middle: interpolated through 0 -> MIDI 66, 1.5 -> 76.5,
+    2.5 -> 78.5, 4.0 -> 98.5, 6.0 -> 116, 10 -> open, at C3. The filters track the keyboard 1:1.
   - PW 0..10 is 50..90 %; CS-1's PW parameter runs 50..95 %, so 0..10 -> 0..113.
   - PWM speed 0..10 is 0.1 Hz .. ~9 Hz on CS-1's exponential 0.1..40 Hz rate scale.
-  - IL and AL: the chart's full travel (-5, +5) is 48 semitones (4 octaves) of filter sweep; CS-1 stores them
-    around 64, a unit a semitone: IL 10 -> 64 - 48, AL 10 -> 64 + 48.
+  - IL and AL are bipolar sliders drawn 0..10 with 5 at the centre; the full travel (-5, +5) is 48 semitones
+    (4 octaves) of filter sweep. CS-1 stores them around 64, a unit a semitone: 0 -> 64 - 48, 5 -> 64, 10 -> 64 + 48.
+    (Measured: the CS-80 V's brass barely sweeps at the onset, its bass starts bright and falls.)
   - Envelope times: the CS-80's attack is 1 ms .. 1 s (the manual's spec), placed on CS-1's exponential 1 ms .. 12 s
     knob. Decay and release follow the CS-80 V's curve, measured as the time to -40 dB: 2 -> 40 ms, 4.5 -> 1.5 s,
     7 -> 3.3 s, 10 -> 10 s (interpolated in log time). Sustain is a square law: 3 sits 21 dB below the peak.
@@ -71,8 +72,13 @@ def lv(v):                       # a 0..10 level, cutoff, depth -> 0..127
     return round(min(10, max(0, v)) * 12.7)
 def lv_sine(v):                  # the sine slider: a 0.4-power curve, 0.5 -> 38 of 127
     return round(127 * (min(10, max(0, v)) / 10) ** 0.4)
-def cut_lp(v):                   # a 0..10 LPF slider -> the knob (MIDI 16 + knob * 15/16 at C3): MIDI 63 + 8.8 v
-    return round(min(127, max(0, (63 + 8.8 * v - 16) * 16 / 15)))
+LPF_PTS = [(0, 66), (1.5, 76.5), (2.5, 78.5), (4.0, 98.5), (6.0, 116), (10, 150)]   # chart -> MIDI at C3, measured on the CS-80 V
+def cut_lp(v):                   # a 0..10 LPF slider -> the knob (MIDI 16 + knob * 15/16 at C3)
+    v = min(10, max(0, v))
+    for (v0, m0), (v1, m1) in zip(LPF_PTS, LPF_PTS[1:]):
+        if v <= v1:
+            midi = m0 + (m1 - m0) * (v - v0) / (v1 - v0)
+            return round(min(127, max(0, (midi - 16) * 16 / 15)))
 def t_att(v):                    # a 0..10 attack slider: 1 ms .. 1 s
     return round(127 * (v / 10 * math.log(1000)) / LN_RANGE)
 DEC_PTS = [(0, 10), (2, 40), (4.5, 1500), (7, 3300), (10, 10000)]   # chart -> ms to -40 dB, measured on the CS-80 V
@@ -96,7 +102,7 @@ for (name, pulse, saw, speed, pwm, pw, noise, hpf, hres, lpf, lres, il, al, fa, 
     wave = 2 if (pulse and saw) else (1 if pulse else 0)
     vals = [1, wave, round(pw * 11.3), lv(pwm), round(speed * 9.5), lv(noise), lv_sine(sine), lv(vcflev), lv(level),
             lv(hpf), lv(hres), cut_lp(lpf), lv(lres),
-            64 - round(il * 4.8), 64 + round(al * 4.8), t_att(fa), t_dec(fd), t_dec(fr),
+            64 + round((il - 5) * 9.6), 64 + round((al - 5) * 9.6), t_att(fa), t_dec(fd), t_dec(fr),
             t_att(va), t_dec(vd), lv_sus(vs), t_dec(vr),
             lv(ibrill), lv(ilevel), lv(abrill), lv(alevel)]
     out.append("    {" + ", ".join(str(v) for v in vals) + "},   /* " + name + " */")

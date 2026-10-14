@@ -253,7 +253,10 @@ static void chan_render(voice_t *v, uint32_t ch, int32_t *mix)
                 x += mulq15(g_noise[t * CTL + i], noise_lv);
             svf_step(&s->hp, x, &h1, &h2, &lp, &hp);
             svf_step(&s->lp, clamp(hp, -65535, 65535), &l1, &l2, &lp, &x);
-            x = mulq15(soft_knee(lp, 24000), vcf_lv);
+#ifndef CH_KNEE
+#define CH_KNEE 24000
+#endif
+            x = mulq15(soft_knee(lp, CH_KNEE), vcf_lv);
             if (sine_lv)
                 x -= mulq15(sine_i(ph), sine_lv);   /* the rising saw's fundamental is -sin: in phase with it */
             ph += inc;
@@ -432,7 +435,13 @@ static void voices_block(int32_t *out, uint32_t n)
     for (i = 0; i < HALF_FRAMES; i++) {
         int32_t x = g_mix[0][i] >> 2, lp, hp;
         if (tone_set) { svf_step(&tone_c, x, &tone_s1, &tone_s2, &lp, &hp); x = lp; }
-        g_mix[0][i] = mulq15(soft_knee(x, 14000), vol);   /* the dry sum: -7 dBFS, the TONE roll-off and a knee */
+#ifndef MASTER_KNEE
+#define MASTER_KNEE 16000
+#endif
+#ifndef DRY_KNEE
+#define DRY_KNEE 14000
+#endif
+        g_mix[0][i] = mulq15(soft_knee(x, DRY_KNEE), vol);   /* the dry sum: -7 dBFS, the TONE roll-off and a knee */
         g_st[2u * i] = g_st[2u * i + 1u] = 0;
     }
     ring_mod(g_mix[0], HALF_FRAMES);                /* after the knee: the sum of eight voices would overflow its products */
@@ -446,7 +455,7 @@ static void voices_block(int32_t *out, uint32_t n)
     {
         int32_t pk = 0;
         for (i = 0; i < 2u * HALF_FRAMES; i++) {
-            int32_t o = soft_knee(g_st[i], 16000), a = o < 0 ? -o : o;   /* the master knee: linear to -6 dBFS, never past 32383 */
+            int32_t o = soft_knee(g_st[i], MASTER_KNEE), a = o < 0 ? -o : o;   /* the master knee: linear to -6 dBFS, never past 32383 */
             out[i] += o;
             if (a > pk) pk = a;
         }
