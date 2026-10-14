@@ -50,6 +50,7 @@ typedef struct {                                      /* what survives a power-o
     uint8_t aat_off;                                 /* the auto after touch switched off (SEQ) */
     uint8_t sus2;                                    /* SUSTAIN II: a new chord ends the sustain of the one before */
     uint8_t rib_range, rib_return, rib_hold;         /* the ribbon: cents a detent (RIB_CENTS), the spring's time, HOLD instead of the spring */
+    uint8_t rib_delay;                               /* the ribbon: how long the bend waits before the spring takes it (0 .. 3 s) */
     uint8_t rolloff;                                 /* TONE: the fixed roll-off above the filters (0 = off, 100 = the CS-80 V's) */
     struct { uint8_t cc, page, knob; } learn[16];
     patch_t patch;
@@ -96,7 +97,7 @@ static const page_t PAGES[NPAGE] = {
     {"KEYBOARD", {GL(kb_bl, "BRIL.LO", 127, K_BIP, CG, "+", "-"), GL(kb_bh, "BRIL.HI", 127, K_BIP, CG, "+", "-"),
                   GL(kb_ll, "LEV.LO", 127, K_BIP, CS, "+", "-"), GL(kb_lh, "LEV.HI", 127, K_BIP, CS, "+", "-")}},
     {"SUSTAIN", {ST(sus2, "MODE", 1, K_SUS, CK, "", ""), NONE, NONE, NONE}},
-    {"RIBBON",  {ST(rib_hold, "HOLD", 1, K_ONOFF, CK, "", ""), ST(rib_range, "RANGE", 127, K_NUM, CW, "WIDE", "FINE"), ST(rib_return, "RETURN", 127, K_NUM, CK, "SLOW", "FAST"), NONE}},
+    {"RIBBON",  {ST(rib_hold, "HOLD", 1, K_ONOFF, CK, "", ""), ST(rib_range, "RANGE", 127, K_NUM, CW, "WIDE", "FINE"), ST(rib_return, "RETURN", 127, K_NUM, CK, "SLOW", "FAST"), ST(rib_delay, "DELAY", 127, K_NUM, CK, "LONG", "NONE")}},
     {"RING MOD", {GL(rm_mod, "MOD", 127, K_NUM, CS, "10", "0"), GL(rm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
                   GL(rm_depth, "DEPTH", 127, K_NUM, CW, "10", "0"), GL(rm_a, "ATTACK", 127, K_NUM, CK, "LONG", "SHORT")}},
     {"CHORUS", {GL(rm_d, "R.DECAY", 127, K_NUM, CK, "LONG", "SHORT"), GL(cho_mode, "MODE", 2, K_CHO, CK, "", ""),
@@ -360,7 +361,7 @@ static const sound_t SOUNDS[] = {
 };
 #define NSOUND (sizeof SOUNDS / sizeof SOUNDS[0])
 
-#define SET_MAGIC 0xD1u
+#define SET_MAGIC 0xD2u
 
 /* the user presets: 32 slots of 128 bytes in the bank sector, each a magic, the tones and the patch */
 #define NUSER 32u
@@ -859,7 +860,7 @@ static void app_init(void)
         set.aat_off = 0;
         set.sus2 = 0;
         set.rolloff = 100;
-        set.rib_range = 70; set.rib_return = 40; set.rib_hold = 0;
+        set.rib_range = 70; set.rib_return = 40; set.rib_hold = 0; set.rib_delay = 28;
         patch = INIT_PATCH;
         sound_load(0);
         set.patch = patch;
@@ -921,7 +922,7 @@ static void app_loop(void)
         if (set.rib_hold && was && (was > 0) != (rib_pos256 > 0)) rib_pos256 = 0;   /* HOLD: turning back through centre lands on it */
         rib_ms = fm1_ms; rib_target256 = rib_pos256;
     }
-    if (!set.rib_hold && rib_pos256 && fm1_ms - rib_ms > 150u) {   /* the spring: back to centre, exponentially, once the knob is quiet */
+    if (!set.rib_hold && rib_pos256 && fm1_ms - rib_ms > (uint32_t)set.rib_delay * set.rib_delay * 3000u / 16129u) {   /* DELAY: 0 .. 3 s, square law */   /* the spring: back to centre, exponentially, once the knob is quiet */
         uint32_t dt = fm1_ms - rib_tick_ms, tau = (uint32_t)RIB_MS[set.rib_return] / 3u + 1u;   /* RETURN 0 is the fastest spring */
         if (dt) {
             int32_t d = (rib_pos256 * (int32_t)(dt > tau ? tau : dt)) / (int32_t)tau;
