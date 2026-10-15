@@ -39,7 +39,7 @@
     <tr><td class="k">LFO</td><td>SUB OSC, SUB OSC 2, TOUCH RESP, AUTO AT.</td></tr>
     <tr><td class="k">FX</td><td>RING MOD, CHORUS, DELAY, DELAY 2, REVERB, REVERB 2, PHASER.</td></tr>
     <tr><td class="k">ARP</td><td>PERFORM, KEYBOARD, SUSTAIN, RIBBON.</td></tr>
-    <tr><td class="k">GLO</td><td>MAIN, then MIDI.</td></tr>
+    <tr><td class="k">GLO</td><td>MAIN, MIDI, KEYS, KEYS 2.</td></tr>
     <tr><td class="k">SAVE</td><td>Saves the panel into a user slot (<a href="#saving">below</a>).</td></tr>
     <tr><td class="k">REC</td><td>MIDI learn (<a href="#midi">below</a>). Lit while waiting.</td></tr>
     <tr><td class="k">SEQ</td><td>The auto after touch on or off. Lit when on.</td></tr>
@@ -57,8 +57,8 @@
   <p>The strip above the status line is a monitor on most pages: <b>OUT</b> is the output level, green up to the point where the master knee starts to bend it, yellow in the knee; <b>AT</b> is the pressure in effect, so you can watch the auto after touch curve; the eight dots are the voices. On VCF EG, VCA EG, AUTO AT and SUB OSC the strip draws the envelope, the curve or the waveform instead.</p>
 
   <h2 id="playing">Playing</h2>
-  <p>The keys play, polyphonically, eight voices with the oldest stolen. OCT− and OCT+ move them two octaves each way. Velocity does what the TOUCH page's I.LEV and I.BRIL say, and the FM-1's keys send a fixed velocity, so from the keys those two do nothing; from MIDI they do. PLAY latches a sustain, which in SUSTAIN mode II (ARP, third page) ends the previous chord's notes when you play the next. <b>SELECT</b> is the ribbon: turn it while notes sound and the pitch bends, a few cents or a couple of semitones a detent as the RIBBON page's RANGE says, and, after the RIBBON page's DELAY, springs back to centre over RETURN's time. HOLD on that page keeps the bend where you leave it instead: it stays where you leave it and a turn back through centre lands on it exactly.</p>
-  <p>The CS-80 had pressure under every key. CS-1 takes pressure from channel or polyphonic aftertouch, from a CC (the mod wheel by default: the MIDI page's EXPR), and from the <a href="#auto">auto after touch</a> curve, whichever is highest. Pressure drives A.BRIL and A.LEV on each channel's TOUCH page, and on the TOUCH RESP page the sub oscillator's speed, pitch depth and filter depth.</p>
+  <p>The keys play, polyphonically, eight voices with the oldest stolen. OCT− and OCT+ move them two octaves each way. Velocity does what the TOUCH page's I.LEV and I.BRIL say. The FM-1's keys are rubber domes with a carbon pill under each, and twenty of them (F3 to C5) sit on rows the chip can measure, so with SENSE on (the KEYS page under GLO) they play with velocity and send polyphonic pressure as you lean on them; that is Velo's sensing, by Charles Vestal, with no change to the hardware. The seven top keys have no measurable row and play at TOP VEL. PLAY latches a sustain, which in SUSTAIN mode II (ARP, third page) ends the previous chord's notes when you play the next. <b>SELECT</b> is the ribbon: turn it while notes sound and the pitch bends, a few cents or a couple of semitones a detent as the RIBBON page's RANGE says, and, after the RIBBON page's DELAY, springs back to centre over RETURN's time. HOLD on that page keeps the bend where you leave it instead: it stays where you leave it and a turn back through centre lands on it exactly.</p>
+  <p>The CS-80 had pressure under every key. CS-1 takes pressure from the keys themselves (the KEYS page), from channel or polyphonic aftertouch over MIDI, from a CC (the mod wheel by default: the MIDI page's EXPR), and from the <a href="#auto">auto after touch</a> curve, whichever is highest. Pressure drives A.BRIL and A.LEV on each channel's TOUCH page, and on the TOUCH RESP page the sub oscillator's speed, pitch depth and filter depth.</p>
 
   <h2 id="tones">Tones and sounds</h2>
   <div class="shot"><figure><img src="img/home.png" alt="The TONES page"><figcaption>HOME: the two rows of eleven tone buttons; the lit ones are playing; the orange underline marks the row SEL has chosen.</figcaption></figure></div>
@@ -82,7 +82,7 @@
     <tr><td class="k">LFO</td><td>SUB OSC · SUB OSC 2 · TOUCH RESP · AUTO AT</td><td>The sub oscillator, its tremolo and clock sync, the pressure levers, the auto curve.</td></tr>
     <tr><td class="k">ARP</td><td>PERFORM · KEYBOARD · SUSTAIN · RIBBON</td><td>Portamento, glissando, detune, vintage; keyboard control; sustain mode; the ribbon's range and spring.</td></tr>
     <tr><td class="k">FX</td><td>RING MOD · CHORUS · DELAY · DELAY 2 · REVERB · REVERB 2 · PHASER</td><td>The effects.</td></tr>
-    <tr><td class="k">GLO</td><td>MAIN · MIDI</td><td>Brilliance, resonance, TONE (the instrument's top-end warmth, an instrument setting rather than part of a sound) and volume; the MIDI settings.</td></tr>
+    <tr><td class="k">GLO</td><td>MAIN · MIDI</td><td>Brilliance, resonance, TONE and volume; the MIDI settings; the keys' velocity and pressure sensing.</td></tr>
   </table>
 
   <h2 id="midi">MIDI</h2>

@@ -33,6 +33,9 @@ enum { ENC_SELECT = 0, ENC_ALGORITHM = 1, ENC_KNOB1 = 2, ENC_KNOB2 = 3, ENC_KNOB
 #define DINGHY_DUAL_CORE 1                      /* 1: CPU1 renders what the app hands it (audio_worker_submit) */
 #endif
 #if defined(DINGHY_HOST) || defined(DINGHY_WEB)
+/* the keys' velocity and pressure (Velo, charlesvestal/fm1-velocity, GPL-3.0): the sensing module is HAL-free, so it
+ * is here for both builds; on the device the scan tick feeds it through the hooks below */
+#include "sense.c"
 #include "../../tests/fake_fm1.h"              /* a fake FM-1 (the panel, the screen, MIDI in, the second core) ... */
 #ifdef DINGHY_HOST
 #include "../../tests/host.c"                  /* ... on a computer: a script, a WAV, PPM screens */
@@ -48,7 +51,39 @@ enum { ENC_SELECT = 0, ENC_ALGORITHM = 1, ENC_KNOB1 = 2, ENC_KNOB2 = 3, ENC_KNOB
 #if DINGHY_DUAL_CORE
 #include "fm1_multicore.h"
 #endif
+/* the analog rows (fm1_input.h, Velo): each sample of a key on PA7 / PA8 goes to the sensing module, which also says
+ * whether the next sample of a key is to be taken with the row driven high */
+static void plat_analog_sample(uint32_t col, uint32_t rowbit, uint32_t v, uint32_t driven);
+static int plat_analog_drive(uint32_t col, uint32_t rowbit);
+#define FM1_INPUT_ANALOG(col, rowbit, v, driven) plat_analog_sample(col, rowbit, v, driven)
+#define FM1_INPUT_DRIVE(col, rowbit) plat_analog_drive(col, rowbit)
 #include "fm1_input.h"
+static void plat_analog_sample(uint32_t col, uint32_t rowbit, uint32_t v, uint32_t driven)
+{
+    int id = FM1_KEYMAP[rowbit][col];
+    if (id >= 14) sense_sample((uint32_t)id - 14u, v, fm1_ticks(), (int)driven);
+}
+static int plat_analog_drive(uint32_t col, uint32_t rowbit)
+{
+    int id = FM1_KEYMAP[rowbit][col];
+    return id >= 14 && sense_want_drive((uint32_t)id - 14u);
+}
+/* the app's view: which keys sit on the analog rows, switching the sensing on (the converter's clock and delay as
+ * measured: divider 7, delay 2) with a drive strength, and whether it runs */
+static uint32_t keys_analog_mask(void)
+{
+    uint32_t m = 0, c, r;
+    for (c = 0; c < FM1_NCOL; c++)
+        for (r = 3; r <= 4u; r++)
+            if (FM1_KEYMAP[r][c] >= 14) m |= 1u << (FM1_KEYMAP[r][c] - 14);
+    return m;
+}
+static void keys_sense_set(uint32_t on, uint32_t drive)
+{
+    fm1_an.drive = (uint8_t)(drive > 4u ? 4u : drive);
+    fm1_an.con = on ? (uint16_t)FM1_ADC_CON(7, 2) : 0u;
+}
+static int keys_sense_live(void) { return fm1_an.con != 0u; }
 #include "fm1_timer.h"
 #include "fm1_lcd_hw.h"
 #include "fm1_audio.h"
@@ -328,7 +363,8 @@ static void platform_poll(void)
     }
     if (fm1_ms >= 30000u && bootguard.pending)
         bootguard_clear(&bootguard);            /* 30 s up: this firmware boots */
-    if ((a = fm1_adc_read(FM1_ADC_MASTER)) >= 0) {
+    a = fm1_an.con ? (int32_t)fm1_an.master : fm1_adc_read(FM1_ADC_MASTER);   /* the scan owns the converter while it samples the keys */
+    if (a >= 0) {
         uint32_t k10;
         knob_avg += (a * 16 - knob_avg) / 8;
         k10 = (uint32_t)(knob_avg / 16);

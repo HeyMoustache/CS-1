@@ -26,7 +26,7 @@ for m in re.finditer(r'\{"([^"]+)",\s*\{(.*?)\}\},', block, re.S):
 CAP = {"CW": "w", "CG": "g", "CR": "r", "CK": "k", "CY": "y", "CS": "s"}
 GROUP = {"TONES": "HOME", "VCO": "EDIT", "VCO 2": "EDIT", "VCF": "EDIT", "VCF EG": "EDIT", "VCA EG": "EDIT", "VCA": "EDIT", "TOUCH": "EDIT",
          "SUB OSC": "LFO", "SUB OSC 2": "LFO", "TOUCH RESP": "LFO", "AUTO AT": "LFO", "PERFORM": "ARP", "KEYBOARD": "ARP", "SUSTAIN": "ARP", "RIBBON": "ARP",
-         "RING MOD": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "REVERB 2": "FX", "PHASER": "FX", "MAIN": "GLO", "MIDI": "GLO"}
+         "RING MOD": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "REVERB 2": "FX", "PHASER": "FX", "MAIN": "GLO", "MIDI": "GLO", "KEYS": "GLO", "KEYS 2": "GLO"}
 PAGE_NOTE = {
     "TONES": "The HOME page: the two rows of tone buttons, the sound's name, and the lower panel's performance levers.",
     "VCO": "The oscillator of the channel being edited (SEL picks I or II). The CS-80's VCO section.",
@@ -43,6 +43,8 @@ PAGE_NOTE = {
     "PERFORM": "Portamento and glissando, channel II's detune, and VINTAGE: each voice drifting a few cents of its own.",
     "KEYBOARD": "Keyboard control: brilliance and level tilted towards the low or the high end of the keyboard. Nothing at middle C, full effect three octaves out.",
     "SUSTAIN": "Mode I sustains every note on its own; mode II ends the sustain of the chord before when a new one is played.",
+    "KEYS": "Velocity and pressure from the FM-1's own keys (Velo's sensing): twenty of the keys, F3 to C5, sit on rows the chip can measure; the carbon pill under each reads softer or harder as you press. Instrument settings.",
+    "KEYS 2": "The pressure range and the top row's fixed velocity.",
     "RIBBON": "The SELECT encoder is the ribbon: turning it bends the pitch of everything sounding, as the CS-80's ribbon did. Instrument settings.",
     "RING MOD": "The ring modulator on both channels' sum: a sine carrier, its rate pushed up by an attack / decay envelope at every note.",
     "CHORUS": "The ring modulator's envelope decay, and the chorus / tremolo: the CS-80's slow phasing tremolo between left and right (stereo here).",
@@ -80,6 +82,8 @@ DESC = {
     ("KEYBOARD", "BRIL.LO"): "Brighter (+) or darker (−) towards the bottom of the keyboard.", ("KEYBOARD", "BRIL.HI"): "The same towards the top.",
     ("KEYBOARD", "LEV.LO"): "Louder or quieter towards the bottom (it can only cut).", ("KEYBOARD", "LEV.HI"): "The same towards the top.",
     ("SUSTAIN", "MODE"): "I or II.",
+    ("KEYS", "SENSE"): "ON: the sensed keys play with velocity and send polyphonic pressure; OFF: every key plays at velocity 100, as a switch.", ("KEYS", "DRIVE"): "How hard the row is driven while a key is read, 1 to 4; 2 measured best (firm presses repeat within a few counts). 0 reads through the pull-up alone, which barely tells presses apart.", ("KEYS", "CURVE"): "The velocity curve's bend: HARD makes a given press play louder, SOFT quieter. Free playing should sit around 60.", ("KEYS", "LIGHT"): "The reading of the lightest press that still plays: velocity 1. Lower it if soft notes come out louder than you mean.",
+    ("KEYS 2", "AT RNG"): "How much harder than the landing is full pressure: TIGHT for a light squeeze, WIDE for a lean.", ("KEYS 2", "TOP VEL"): "The velocity of the seven top keys, C#5 to G5, which have no measurable row.",
     ("RIBBON", "HOLD"): "OFF: the spring returns the bend to centre when the knob is still. ON: it stays where you leave it, and turning back through centre lands exactly on it.", ("RIBBON", "RANGE"): "How far a detent bends: 5 cents at FINE to two semitones at WIDE (two octaves at most).", ("RIBBON", "RETURN"): "The spring's time back to centre, 50 ms to 5 s (when HOLD is off).", ("RIBBON", "DELAY"): "How long the bend stays put after the knob goes still before the spring takes it back: none to 3 s, finer at the short end. The default is about 150 ms.",
     ("RING MOD", "MOD"): "How much of the ring-modulated signal replaces the plain one.", ("RING MOD", "SPEED"): "The carrier's rate, 0.5 Hz to 2 kHz: slow is a tremolo, fast is bells.",
     ("RING MOD", "DEPTH"): "How far the envelope pushes the rate up.", ("RING MOD", "ATTACK"): "The envelope's attack.",

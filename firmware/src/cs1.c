@@ -51,6 +51,7 @@ typedef struct {                                      /* what survives a power-o
     uint8_t sus2;                                    /* SUSTAIN II: a new chord ends the sustain of the one before */
     uint8_t rib_range, rib_return, rib_hold;         /* the ribbon: cents a detent (RIB_CENTS), the spring's time, HOLD instead of the spring */
     uint8_t rib_delay;                               /* the ribbon: how long the bend waits before the spring takes it (0 .. 3 s) */
+    uint8_t key_sense, key_drive, key_curve, key_light, key_at, key_topvel;   /* the keys' own velocity and pressure (Velo): on, DRIVE 1..4, the curve, the lightest press, the pressure range, the top row's fixed velocity */
     uint8_t rolloff;                                 /* TONE: the fixed roll-off above the filters (0 = off, 100 = the CS-80 V's) */
     struct { uint8_t cc, page, knob; } learn[16];
     patch_t patch;
@@ -68,7 +69,7 @@ typedef struct { const char *name; uint8_t off, max, kind, global, color; const 
 #define NONE {0, 0, 0, 0, 0, 0, 0, 0}
 typedef struct { const char *title; pdesc_t p[4]; } page_t;
 enum { PG_HOME = 0, PG_VCO, PG_VCO2, PG_VCF, PG_FENV, PG_VENV, PG_VCA2, PG_TOUCH,
-       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RIB, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_REVERB2, PG_PHASER, PG_MAIN, PG_MIDI, NPAGE };
+       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RIB, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_REVERB2, PG_PHASER, PG_MAIN, PG_MIDI, PG_KEYS, PG_KEYS2, NPAGE };
 static const page_t PAGES[NPAGE] = {
     {"TONES", {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
                        GL(mix, "MIX", 127, K_NUM, CW, "II", "I"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
@@ -115,12 +116,15 @@ static const page_t PAGES[NPAGE] = {
                 ST(rolloff, "TONE", 127, K_NUM, CY, "WARM", "OPEN"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
     {"MIDI",   {ST(midi_chan, "CHAN", 16, K_MCHAN, CW, "16", "OMNI"), ST(expr, "EXPR", 127, K_EXPR, CW, "CC", "AT"),
                 ST(pc_on, "PROG", 1, K_ONOFF, CK, "", ""), ST(nlearn, "LEARNS", 16, K_NUM, CK, "", "")}},
+    {"KEYS",   {ST(key_sense, "SENSE", 1, K_ONOFF, CK, "", ""), ST(key_drive, "DRIVE", 4, K_NUM, CW, "4", "0"),
+                ST(key_curve, "CURVE", 127, K_NUM, CG, "SOFT", "HARD"), ST(key_light, "LIGHT", 127, K_NUM, CW, "HIGH", "LOW")}},
+    {"KEYS 2", {ST(key_at, "AT RNG", 127, K_NUM, CG, "WIDE", "TIGHT"), ST(key_topvel, "TOP VEL", 127, K_NUM, CW, "127", "1"), NONE, NONE}},
 };
 /* the pages a button cycles through, for the "2/4" in the header: {first, count} by page */
 static const uint8_t PAGE_GROUP[NPAGE][2] = {
     {PG_HOME, 1}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7},
     {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7},
-    {PG_MAIN, 2}, {PG_MAIN, 2}};
+    {PG_MAIN, 4}, {PG_MAIN, 4}, {PG_MAIN, 4}, {PG_MAIN, 4}};
 static const char *const N_FEET[6] = {"16'", "8'", "5.3'", "4'", "2.7'", "2'"};
 static const char *const N_WAVE[3] = {"SAW", "PULSE", "BOTH"};
 static const char *const N_LWAVE[5] = {"SINE", "TRI", "SAW", "SAW DN", "SQR"};
@@ -167,8 +171,9 @@ static const patch_t INIT_PATCH = {                   /* the globals; sound_load
     {{FT_8, W_SAW, 0, 0, 40, 0, 0, 127, 110, 0, 0, 127, 0, 64, 64, 0, 40, 40, 20, 60, 127, 50, 0, 0, 0, 0},
      {FT_8, W_SAW, 0, 0, 40, 0, 0, 127, 110, 0, 0, 127, 0, 64, 64, 0, 40, 40, 20, 60, 127, 50, 0, 0, 0, 0}},
     60, LW_SINE, 0, 0, 0, 64, 64, 100,
-    64, 0, 0, 0,  0, 0, 0,  0, 64, 0, 10, 60,  CHO_OFF, 30, 60,  40, 60, 0, 40,  70, 50, 0, 1, 40,  0, 80, 50, 0,  64,  30, 0, 0,  64, 64, 64, 64,
-    .ph_rate = 40, .ph_depth = 64, .ph_fb = 40, .rv_shift = 12,
+    64, 0, 0, 0,  0, 0, 0,  0, 64, 0, 10, 60,  CHO_OFF, 30, 60,  40, 60, 0, 40,  70, 50, 0, 1, 40,  0, 80, 50, 0,
+    .rv_shift = 12, .mix = 64, .vintage = 30, .kb_bl = 64, .kb_bh = 64, .kb_ll = 64, .kb_lh = 64,   /* (designated from here: a field added above shifted these once) */
+    .ph_rate = 40, .ph_depth = 64, .ph_fb = 40,
 };
 
 /* sounds: a tone on each channel and the globals, the way the CS-80's two rows get combined */
@@ -361,7 +366,7 @@ static const sound_t SOUNDS[] = {
 };
 #define NSOUND (sizeof SOUNDS / sizeof SOUNDS[0])
 
-#define SET_MAGIC 0xD2u
+#define SET_MAGIC 0xD3u
 
 /* the user presets: 32 slots of 128 bytes in the bank sector, each a magic, the tones and the patch */
 #define NUSER 32u
@@ -805,6 +810,16 @@ static uint32_t prev_keys, t_change, dirty, lit_drawn = ~0u, status_drawn = ~0u,
 static uint32_t content_dirty;                   /* the page's content changed (a sound, a tone, a switch): redraw in place, no clear */
 static uint32_t strip_drawn = ~0u, strip_ms;
 static uint8_t held[27];                               /* the note each key plays (255: a tone button, not a note) */
+static uint8_t key_at_sent[27], last_vel, last_key;    /* the pressure last sent per key; the last landing (the KEYS pages' readout) */
+static uint32_t at_poll_ms;
+static void keys_apply(void)                        /* the KEYS pages into the sensing module and the scan */
+{
+    sn_cfg.drive = set.key_drive > 4u ? 4u : set.key_drive;
+    sn_cfg.d_curve = (uint16_t)(40u + (uint32_t)set.key_curve * 80u / 127u);      /* 0.40 .. 1.20 */
+    sn_cfg.d_ceil = (uint16_t)(600u + (uint32_t)set.key_light * 3u);              /* 600 .. 981: the lightest seated press */
+    sn_cfg.d_at_range = (uint16_t)(16u + (uint32_t)set.key_at);                   /* 16 .. 143 counts below the landing = full */
+    keys_sense_set(set.key_sense, set.key_drive);
+}
 static int32_t rib_pos256;                       /* the ribbon's position, 1/256 semitone */
 static uint32_t rib_ms, rib_tick_ms;              /* when it last moved; the spring's last step */
 static uint32_t home_held, home_used;                  /* HOME is down; a key was pressed under it */
@@ -861,6 +876,7 @@ static void app_init(void)
         set.sus2 = 0;
         set.rolloff = 100;
         set.rib_range = 70; set.rib_return = 40; set.rib_hold = 0; set.rib_delay = 28;
+        set.key_sense = 1; set.key_drive = 2; set.key_curve = 48; set.key_light = 99; set.key_at = 48; set.key_topvel = 100;
         patch = INIT_PATCH;
         sound_load(0);
         set.patch = patch;
@@ -869,6 +885,8 @@ static void app_init(void)
     loaded = patch;                                    /* (after a power-off the panel as kept is the reference) */
     aat_on = !set.aat_off;
     tone_set = set.rolloff;
+    sense_init(keys_analog_mask());
+    keys_apply();
     bank_ok = bank_load(bank.raw, sizeof bank.raw) == 0;
     if (!bank_ok) { uint32_t i; for (i = 0; i < NUSER; i++) slot_at(i)->magic = 0; }
     lcd_fill(0, 0, 240, 240, C_PANEL);
@@ -876,7 +894,9 @@ static void app_init(void)
 
 static void app_loop(void)
 {
+    uint32_t live;
     tone_set = set.rolloff;
+    keys_apply();
     uint32_t keys, down, up, rel, b, k, lit = 0, sounding, nv = 0, load;
     uint32_t base = (uint32_t)(KEY0 + 12 * oct());
     uint8_t st, d1, d2;
@@ -887,7 +907,9 @@ static void app_loop(void)
     up = prev_keys & ~keys;
     prev_keys = keys;
     home_held = fm1_in.buttons >> BTN_HOME & 1u;
+    live = keys_sense_live() && set.key_sense;        /* the keys' own velocity and pressure: these keys' notes come from the sensing */
     for (k = 0; k < 27u; k++) {                        /* (a key stops the note it started: the octave may change meanwhile) */
+        if (live && sense_is_analog(k) && !home_held) continue;
         if (down >> k & 1u) {
             if (home_held) {                           /* HOME + a key: a tone button; the lower eleven keys row I, the upper row II */
                 uint32_t row = k >= 16u ? 1u : 0u, pos = k >= 16u ? k - 16u : k;
@@ -895,9 +917,30 @@ static void app_loop(void)
                 held[k] = 255;
                 continue;
             }
-            held[k] = (uint8_t)(base + k); note_on(held[k], 100); midi_send(0x90, held[k], 100);
+            { uint32_t vel = live ? (uint32_t)(set.key_topvel ? set.key_topvel : 1u) : 100u;
+              held[k] = (uint8_t)(base + k); note_on(held[k], vel); midi_send(0x90, held[k], vel); }
         }
         if (up >> k & 1u && held[k] != 255u) { note_off(held[k]); midi_send(0x80, held[k], 0); }
+    }
+    {                                                  /* the sensed keys: landed with a velocity, lifted, grazed */
+        sense_ev_t e;
+        while (sense_take(&e)) {
+            k = e.key;
+            if (!live || k >= 27u) continue;
+            if (e.type == EV_ON) {
+                if (home_held) { held[k] = 255; continue; }   /* a tone button: the switch path took it */
+                held[k] = (uint8_t)(base + k); note_on(held[k], e.vel ? e.vel : 1u); midi_send(0x90, held[k], e.vel ? e.vel : 1u); last_vel = e.vel; last_key = (uint8_t)k;
+                if (page == PG_KEYS || page == PG_KEYS2) { char m[20] = "K   V    R    "; uint32_t r = sn_key[k].dland; m[1] = (char)('0' + k / 10u); m[2] = (char)('0' + k % 10u); m[5] = (char)('0' + e.vel / 100u); m[6] = (char)('0' + e.vel / 10u % 10u); m[7] = (char)('0' + e.vel % 10u); m[10] = (char)('0' + r / 1000u); m[11] = (char)('0' + r / 100u % 10u); m[12] = (char)('0' + r / 10u % 10u); m[13] = (char)('0' + r % 10u); say(m); }
+            } else if (e.type == EV_OFF && held[k] != 255u) { note_off(held[k]); midi_send(0x80, held[k], 0); key_at_sent[k] = 0; }
+        }
+        if (live && fm1_ms - at_poll_ms >= 10u) {       /* polyphonic pressure from the held keys, ~100 times a second */
+            at_poll_ms = fm1_ms;
+            for (k = 0; k < 27u; k++)
+                if (held[k] != 255u && sense_is_analog(k)) {
+                    uint32_t p = sense_pressure(k);
+                    if (p != key_at_sent[k]) { key_at_sent[k] = (uint8_t)p; voices_pressure((int32_t)held[k], p); midi_send(0xA0, held[k], p); }
+                }
+        }
     }
 
     b = fm1_input_edges(&rel);                         /* buttons pressed since the last call (bit = button id) */
@@ -909,7 +952,7 @@ static void app_loop(void)
     if (b & (1u << BTN_LFO)) page = page >= PG_SUB && page < PG_AUTO ? page + 1u : PG_SUB;
     if (b & (1u << BTN_FX)) page = page >= PG_RING && page < PG_PHASER ? page + 1u : PG_RING;
     if (b & (1u << BTN_ARP)) page = page >= PG_PLAY && page < PG_RIB ? page + 1u : PG_PLAY;
-    if (b & (1u << BTN_GLO)) page = page == PG_MAIN ? PG_MIDI : PG_MAIN;
+    if (b & (1u << BTN_GLO)) page = page >= PG_MAIN && page < PG_KEYS2 ? page + 1u : PG_MAIN;
     if (b & (1u << BTN_SEL)) { set.chan ^= 1u; changed(); content_dirty = 1u; }
     if (b & (1u << BTN_PLAY)) { sustain_set(!sustain); say(sustain ? "HOLD ON" : "HOLD OFF"); }   /* a sustain latch */
     if (b & (1u << BTN_SEQ)) { set.aat_off ^= 1u; aat_on = !set.aat_off; changed(); say(aat_on ? "AUTO AT ON" : "AUTO AT OFF"); content_dirty = 1u; }
@@ -1100,7 +1143,7 @@ static void app_loop(void)
     fm1_led_key(BTN_ARP, page >= PG_PLAY && page <= PG_RIB);
     fm1_led_key(BTN_PLAY, sustain);
     fm1_led_key(BTN_SEQ, aat_on);
-    fm1_led_key(BTN_GLO, page == PG_MAIN || page == PG_MIDI);
+    fm1_led_key(BTN_GLO, page >= PG_MAIN && page <= PG_KEYS2);
     fm1_led_key(BTN_SAVE, save_arm != 0);
     fm1_led_key(BTN_REC, learn_arm != 0);
 

@@ -11,6 +11,8 @@ $CC -O2 -Wall -o build/host/audio_worker_test tests/audio_worker_test.c
 build/host/audio_worker_test
 $CC -O2 -Wall -pthread -o build/host/audio_worker_thread_test tests/audio_worker_thread_test.c
 build/host/audio_worker_thread_test
+$CC -O2 -Wall -Wno-unused-function -o build/host/sense_test tests/sense_test.c
+build/host/sense_test
 build/host/cs1 build/host/cs1
 python3 - <<'PYEOF'
 from pathlib import Path
