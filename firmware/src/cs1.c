@@ -810,6 +810,7 @@ static uint32_t prev_keys, t_change, dirty, lit_drawn = ~0u, status_drawn = ~0u,
 static uint32_t content_dirty;                   /* the page's content changed (a sound, a tone, a switch): redraw in place, no clear */
 static uint32_t strip_drawn = ~0u, strip_ms;
 static uint8_t held[27];                               /* the note each key plays (255: a tone button, not a note) */
+static uint32_t midi_redraw;                     /* page knobs moved by MIDI this loop (bit k), bit 4 the drawing: redrawn once after the drain */
 static uint8_t key_at_sent[27], last_vel, last_key;    /* the pressure last sent per key; the last landing (the KEYS pages' readout) */
 static uint32_t p_base8[27], p_t0[27];                 /* the pressure's zero per key: the resting reading (less the diode), 1/256; when the key landed */
 static int32_t p_s[27];                                /* the pressure, smoothed, Q15 */
@@ -1106,7 +1107,7 @@ static void app_loop(void)
                     q = d->global ? (uint8_t *)&patch + d->off : (uint8_t *)&patch.ch[set.chan] + d->off;
                     *q = (uint8_t)(d->max == 127u ? d2 : (d2 * (d->max + 1u)) >> 7);
                     set.patch = patch; changed(); tones_drawn = ~0u;
-                    if (page == set.learn[k].page) { if (page == PG_HOME) draw_home(); else draw_param(set.learn[k].knob & 3u); }
+                    if (page == set.learn[k].page) midi_redraw |= 1u << (set.learn[k].knob & 3u);
                     break;
                 }
             if (k < set.nlearn) continue;
@@ -1119,8 +1120,7 @@ static void app_loop(void)
                 if (!d->name) continue;
                 tgt = param_ptr(d);
                 *tgt = (uint8_t)(d->max == 127u ? d2 : (d2 * (d->max + 1u)) >> 7);
-                set.patch = patch; changed(); if (page == PG_HOME) draw_home(); else draw_param(d1 - 80u); tones_drawn = ~0u;
-                if (page_has_drawing()) draw_shape();
+                set.patch = patch; changed(); midi_redraw |= 1u << (d1 - 80u);
                 continue;
             }
             case 5: tgt = &patch.porta; break;
@@ -1144,6 +1144,13 @@ static void app_loop(void)
             if (page_drawn == page) { if (page == PG_HOME) draw_home(); else for (k = 0; k < 4u; k++) draw_param(k); }
             tones_drawn = ~0u;
         }
+    }
+    if (midi_redraw) {                                 /* once, after the drain: a knob's stream of CCs no longer redraws per message */
+        uint32_t k2;
+        if (page == PG_HOME) draw_home(); else for (k2 = 0; k2 < 4u; k2++) if (midi_redraw >> k2 & 1u) draw_param(k2);
+        tones_drawn = ~0u;
+        if (page_has_drawing()) draw_shape();
+        midi_redraw = 0;
     }
 
     sync_update();
