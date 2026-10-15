@@ -1,14 +1,14 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* MIDI IN on the TRS jack: PH8 -> input channel 1 -> UART1 RX, 31250 baud,
- * RX DMA into a 128-byte ring, polled from the TIMER5 ISR (no UART IRQ).
+ * RX DMA into a 2048-byte ring, polled from the TIMER5 ISR (no UART IRQ).
  * Channel messages go directly into midi_in_q next to USB-MIDI packets
  * (cable 0, CIN = status >> 4). */
 #pragma once
 #include <stdint.h>
 #include "fm1_uart.h"
 
-#define UM_RING 128u
+#define UM_RING 2048u                     /* 655 ms at 31250 baud: a flash erase (interrupts masked, up to 400 ms) cannot overflow it; the DMA fills it meanwhile */
 static volatile uint8_t um_ring[UM_RING] __attribute__((aligned(16)));
 static struct {
     uint32_t rd, pend;

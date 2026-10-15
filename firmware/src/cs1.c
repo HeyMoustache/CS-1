@@ -810,6 +810,7 @@ static uint32_t prev_keys, t_change, dirty, lit_drawn = ~0u, status_drawn = ~0u,
 static uint32_t content_dirty;                   /* the page's content changed (a sound, a tone, a switch): redraw in place, no clear */
 static uint32_t strip_drawn = ~0u, strip_ms;
 static uint8_t held[27];                               /* the note each key plays (255: a tone button, not a note) */
+static uint32_t last_midi_ms;                    /* the last MIDI message that was not the clock: a flash save waits for quiet */
 static uint32_t midi_redraw;                     /* page knobs moved by MIDI this loop (bit k), bit 4 the drawing: redrawn once after the drain */
 static uint8_t key_at_sent[27], last_vel, last_key;    /* the pressure last sent per key; the last landing (the KEYS pages' readout) */
 static uint32_t p_base8[27], p_t0[27];                 /* the pressure's zero per key: the resting reading (less the diode), 1/256; when the key landed */
@@ -1069,6 +1070,7 @@ static void app_loop(void)
         }
 
     while (midi_get(&st, &d1, &d2)) {                  /* MIDI in (USB or TRS) */
+        if (st != 0xF8u) last_midi_ms = fm1_ms;        /* (the clock alone does not hold a save off) */
         uint32_t m = st & 0xF0u, chn = (st & 15u) + 1u;
         if (st == 0xF8u) { clock_tick(); continue; }  /* MIDI clock */
         if (st == 0xFAu) { lfo_reset++; clk_n = 0; clk_t0 = fm1_ms; continue; }   /* start: the sub oscillator from 0 */
@@ -1222,7 +1224,7 @@ static void app_loop(void)
         status_drawn = k; tones_drawn = k; draw_status(oct(), nv);
     }
 
-    if (dirty && !sounding && fm1_ms - t_change > 2000u) {   /* 2 s after the change, when silent (an erase stalls the sound) */
+    if (dirty && !sounding && fm1_ms - t_change > 2000u && fm1_ms - last_midi_ms > 1000u) {   /* 2 s after the change, when silent and MIDI is quiet (an erase stalls everything for up to 400 ms) */
         settings_save(&set, sizeof set);
         dirty = 0;
     }
