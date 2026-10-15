@@ -203,7 +203,7 @@ typedef struct {
 } sound_t;
 enum { T_STR1 = 0, T_STR2, T_STR3, T_STR4, T_BRS1, T_BRS2, T_FLUTE, T_BRS3, T_EPIANO, T_BASS, T_CLAV1, T_CLAV2,
        /* (the rest in order) */
-       T_HARP1, T_HARP2, T_ORG1, T_ORG2, T_GTR1, T_GTR2, T_FNK1, T_FNK2, T_FNK3, T_FNK4, T_GLASS1, T_GLASS2 };
+       T_HARP1, T_HARP2, T_ORG1, T_ORG2, T_GTR1, T_GTR2, T_FNK1, T_FNK2, T_FNK3, T_FNK4 };
 #define F16 (FT_16 + 1)
 #define F8 (FT_8 + 1)
 #define F4 (FT_4 + 1)
@@ -360,9 +360,8 @@ static const sound_t SOUNDS[] = {
      .lfo_spd = 30, .lfo_vcf = 25, .cho_mode = CHO_CHORUS, .cho_spd = 14, .cho_depth = 80, .v_a = 90, .v_r = 100, .aat_delay = 50, .aat_rise = 80,
      .aat_level = 80, .rv_mix = 60, .rv_size = 110, .rv_damp = 65, .rv_shim = 25, .ph_rate = 8, .ph_depth = 100, .ph_fb = 55, .ph_mix = 70, .vintage = 70,
      .tw = {TWEND}},
-    {.name = "GLASS PIPES", .tone = {T_GLASS1, T_GLASS2}, .feet1 = {F8, F53}, .level = {36, 36}, .brill = 59, .reso = 76, .lfo_spd = 85, .at_vco = 13, .rv_shift = 7,
-     .cho_mode = CHO_CHORUS, .cho_spd = 25, .cho_depth = 70, .rv_mix = 70, .rv_size = 85, .rv_damp = 55, .rv_shim = 100,
-     .dly_fb = 45, .dly_mix = 45, .dly_ping = 1, .dly_sync = 3, .dly_tape = 30, .tw = {TWEND}},   /* after Arturia's "Glass Pipes": the panels read off its screen */
+    /* ---- after CS-80 V presets, our names (tools/arturia_convert.py) */
+#include "cs1_sounds_conv.h"
 };
 #define NSOUND (sizeof SOUNDS / sizeof SOUNDS[0])
 

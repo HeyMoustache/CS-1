@@ -1,0 +1,20 @@
+# CS-80 V factory presets turned into CS-1 sounds (tools/arturia_convert.py): "their name = our name".
+# The sounds carry our names; the values were read from the presets on a computer with the plugin installed.
+LSO Replicant = TYRELL TOWER
+Deckards Heating = RAIN ON NEON
+Classic Brass = BRASS SECTION
+Ascendant Brass = RISING BRASS
+Gentle Syn Brass = SOFT BRASS
+CS80 Strings = STRING MACHINE
+Strings of 1981 = STRINGS 81
+Chamber Strings = CHAMBER
+Warm Heaven = WARM SKY
+Meadow Flute = FIELD FLUTE
+Big Crystal Bells = ICE BELLS
+Carillon = BELL TOWER
+Glass Pipes = GLASS ORGAN
+Toy Piano = MUSIC BOX
+Funky Clav = CLAV FUNK
+Swimming Bass = SWIM BASS
+Distant Oceans = FAR SHORE
+Tear Drops = RAINDROPS

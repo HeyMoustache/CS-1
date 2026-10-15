@@ -34,8 +34,11 @@ VINTAGE on PERFORM lets each voice drift a few cents on its own, as the voice ca
 PRESETS (and program change) runs through these, then the 32 user slots; HOME + a key picks a tone for a channel,
 ALGO steps along its row. The classic ones are recipes after what is documented about the records (which presets,
 the technique), not transcriptions; they pair a row I tone with a row II tone as the instrument does, and most
-carry the chorus, a touch of detune, an auto after touch curve and the plate. GLASS PIPES is a transcription:
-both panels read off a CS-80 V preset's screen and checked against its takes, the method for the sounds to come.
+carry the chorus, a touch of detune, an auto after touch curve and the plate. The last group is converted from
+CS-80 V factory presets on a computer with the plugin installed: `tools/converted.txt` lists them with our names,
+`tools/arturia_convert.py` reads each preset's panel and maps it through the same calibration as the manual's tones
+(`tools/converted.json` keeps the values, so the build does not need the plugin), and `tools/level_converted.py`
+evens out their loudness by measurement.
 
 | | |
 | --- | --- |
@@ -44,7 +47,8 @@ both panels read off a CS-80 V preset's screen and checked against its takes, th
 | The eighties | BORN USA, XMAS BASS (the sub oscillator's inverted saw into the filter), WHO BASS, BABOOSHKA, DUCHESS, TURN IT ON, TIME STRINGS, VIENNA, OXYGENE, ENO WASH, WALKING, 4001 PLUCK, 4001 STRINGS, LONG BRASS, SHRIEK LEAD, SQUELCH BASS |
 | The manual's own examples | TRUMPET, CLARINET, OBOE, TIMPANI |
 | The plain pairs | STRINGS 1+2, BRASS 1+2, FLUTE+BASS, ORGANS, CLAVS, HARPSI, E.PIANO, FUNKY 1+2 |
-| With the effects | TAPE PAD, SHIMMER CHOIR, PHASE STRINGS, ECHO KEYS, TAPE BRASS, DEEP DRIFT, GLASS PIPES |
+| With the effects | TAPE PAD, SHIMMER CHOIR, PHASE STRINGS, ECHO KEYS, TAPE BRASS, DEEP DRIFT |
+| After CS-80 V presets, our names | TYRELL TOWER, RAIN ON NEON, BRASS SECTION, RISING BRASS, SOFT BRASS, STRING MACHINE, STRINGS 81, CHAMBER, WARM SKY, FIELD FLUTE, ICE BELLS, BELL TOWER, GLASS ORGAN, MUSIC BOX, CLAV FUNK, SWIM BASS, FAR SHORE, RAINDROPS |
 
 ## Layout
 

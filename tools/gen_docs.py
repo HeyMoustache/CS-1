@@ -112,10 +112,31 @@ for line in block.splitlines():
     if g: group = g.group(1)
     m = re.search(r'\.name = "([^"]+)",.*?\.tone = \{T_(\w+), T_(\w+)\}', line)
     if m: sounds.append((group, m.group(1), m.group(2), m.group(3)))
+for line in (SRC.parents[1] / "gen" / "cs1_sounds_conv.h").read_text().splitlines() if (SRC.parents[1] / "gen" / "cs1_sounds_conv.h").exists() else []:
+    m = re.search(r'\.name = "([^"]+)", \.tone = \{(\d+), (\d+)\}', line)
+    if m: sounds.append(("after CS-80 V presets, our names", m.group(1), "CONV", "CONV"))
 TONE = {"STR1": "String 1", "STR2": "String 2", "STR3": "String 3", "STR4": "String 4", "BRS1": "Brass 1", "BRS2": "Brass 2", "BRS3": "Brass 3", "FLUTE": "Flute",
         "EPIANO": "Electric Piano", "BASS": "Bass", "CLAV1": "Clavichord 1", "CLAV2": "Clavichord 2", "HARP1": "Harpsichord 1", "HARP2": "Harpsichord 2",
-        "ORG1": "Organ 1", "ORG2": "Organ 2", "GTR1": "Guitar 1", "GTR2": "Guitar 2", "FNK1": "Funky 1", "FNK2": "Funky 2", "FNK3": "Funky 3", "FNK4": "Funky 4", "GLASS1": "Glass Pipes I (a panel)", "GLASS2": "Glass Pipes II (a panel)"}
+        "ORG1": "Organ 1", "ORG2": "Organ 2", "GTR1": "Guitar 1", "GTR2": "Guitar 2", "FNK1": "Funky 1", "FNK2": "Funky 2", "FNK3": "Funky 3", "FNK4": "Funky 4", "CONV": "its own panel"}
 SOUND_NOTE = {
+    "TYRELL TOWER": "Slow, wide strings under a long hall: the end-titles feeling.",
+    "RAIN ON NEON": "A dark pad with the tremolo moving and the auto after touch leaning in.",
+    "BRASS SECTION": "A full brass section from two sawtooths, the filter opening as you lean.",
+    "RISING BRASS": "Brass that swells up over its attack.",
+    "SOFT BRASS": "A gentle brass pad for chords.",
+    "STRING MACHINE": "The classic CS-80 string ensemble.",
+    "STRINGS 81": "Bright early-eighties strings.",
+    "CHAMBER": "A small, close string section.",
+    "WARM SKY": "A warm, slow pad.",
+    "FIELD FLUTE": "A breathy flute.",
+    "ICE BELLS": "Ring-modulated bells with a long tail.",
+    "BELL TOWER": "Large tuned bells.",
+    "GLASS ORGAN": "A narrow PWM pulse under a pure sine a fifth up, the repeats climbing a fifth.",
+    "MUSIC BOX": "A small, bright plucked toy.",
+    "CLAV FUNK": "A funky clavinet.",
+    "PLAIN BASS": "A dry, direct bass.",
+    "FAR SHORE": "A wide, distant pad.",
+    "RAINDROPS": "Soft plucked droplets.",
     "BLADE BRASS": "The Blade Runner brass from the presets: detuned, a slow swell, vibrato and brightness under pressure, chorus, a little glide.",
     "BR BLUES": "A high, bright, expressive lead for Blade Runner Blues: String 3 at 4' over Brass 3, pressure vibrato, a long synced ping-pong tail.",
     "BR FLUTE": "The Main Titles flute line: Flute over a quiet Organ 2 an octave down, long portamento for the glides.",
@@ -156,7 +177,6 @@ SOUND_NOTE = {
     "PHASE STRINGS": "Strings 1 + 2 through the phaser at full, feedback high: the seventies string machine.",
     "ECHO KEYS": "Electric piano with a clavichord edge, a synced ping-pong tape echo and a small plate.",
     "TAPE BRASS": "Brass 1 + 3 with the tape echo on the beat and the auto after touch leaning in: the Vangelis echo.",
-    "GLASS PIPES": "After the CS-80 V's Glass Pipes: a fast narrow PWM pulse under a sine-rich saw an octave up, both panels read off the plugin's screen; chorus, a synced tape echo and a shimmering plate stand in for its three effects.",
     "DEEP DRIFT": "Strings over a 16' bass, the voices drifting far, a very slow deep phaser and a dark shimmering plate.",
 }
 

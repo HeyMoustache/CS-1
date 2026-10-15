@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 # the generated headers must be what the generators make now
 GEN_WAS=$(mktemp -d); cp firmware/gen/cs1_*.h "$GEN_WAS"/
 python3 tools/gen_tables.py > /dev/null && python3 tools/gen_presets.py > /dev/null
-diff -q "$GEN_WAS"/cs1_tables.h firmware/gen/cs1_tables.h > /dev/null && diff -q "$GEN_WAS"/cs1_presets.h firmware/gen/cs1_presets.h > /dev/null || { echo 'firmware/gen/ was not what tools/gen_*.py make (now regenerated: review and commit it)'; exit 1; }
+diff -q "$GEN_WAS"/cs1_tables.h firmware/gen/cs1_tables.h > /dev/null && diff -q "$GEN_WAS"/cs1_presets.h firmware/gen/cs1_presets.h > /dev/null && diff -q "$GEN_WAS"/cs1_sounds_conv.h firmware/gen/cs1_sounds_conv.h > /dev/null || { echo 'firmware/gen/ was not what tools/gen_*.py make (now regenerated: review and commit it)'; exit 1; }
 rm -rf "$GEN_WAS"
 tests/run_host.sh
 web/site/build.sh
