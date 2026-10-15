@@ -817,11 +817,11 @@ static uint8_t p_on[27];
 /* the lean on a held key, 0..127 (after MONK-1's pressure(), in fixed point): counted from where the key RESTS, not where it
  * landed: a key goes on settling after the note. The zero follows the driven reading down quickly for 250 ms, then creeps
  * after it, and comes back up at once when the key is eased. The lean is the pill's resistance below its rest on a log
- * scale (the reading less the diode): 0.08 octave is noise, SENSIT sets how much more is full (1.5 octaves down to 0.12),
- * and the lean is squared on the way out: the top wants a real push. */
+ * scale (the reading less the diode): 0.04 octave is noise, SENSIT sets how much more is full (an octave down to a tenth;
+ * Velo measured a soft and a firm press a fifth of an octave apart at DRIVE 2). */
 static uint32_t key_lean(uint32_t k)
 {
-    uint32_t d, base, dead = 20, span = 384u - (uint32_t)set.key_at * 353u / 127u;   /* 1/256 octave: 1.5 .. 0.12; 0.98 at the default */
+    uint32_t d, base, dead = 10, span = 256u - (uint32_t)set.key_at * 230u / 127u;   /* 1/256 octave: 1.0 .. 0.1; 0.35 at the default (92) */
     int32_t lean, x;
     if (sn_key[k].st != SN_DOWN || !sn_key[k].dn) { p_on[k] = 0; p_s[k] = 0; return 0; }
     d = sn_key[k].d > SN_DBASE + 1u ? sn_key[k].d - SN_DBASE : 1u;
@@ -833,7 +833,6 @@ static uint32_t key_lean(uint32_t k)
     lean = (int32_t)LOG2_Q8[base] - (int32_t)LOG2_Q8[d];
     x = ((lean - (int32_t)dead) << 15) / (int32_t)span;
     x = x < 0 ? 0 : x > 32767 ? 32767 : x;
-    x = (x * x) >> 15;                                                 /* squared: little for a light lean */
     p_s[k] += ((x - p_s[k]) * 10158) >> 15;                           /* ~30 ms */
     return (uint32_t)(p_s[k] * 127 + 16384) >> 15;
 }
@@ -901,7 +900,7 @@ static void app_init(void)
         set.sus2 = 0;
         set.rolloff = 100;
         set.rib_range = 70; set.rib_return = 40; set.rib_hold = 0; set.rib_delay = 28;
-        set.key_sense = 1; set.key_drive = 2; set.key_curve = 48; set.key_light = 99; set.key_at = 48; set.key_topvel = 100;
+        set.key_sense = 1; set.key_drive = 2; set.key_curve = 48; set.key_light = 99; set.key_at = 92; set.key_topvel = 100;
         patch = INIT_PATCH;
         sound_load(0);
         set.patch = patch;
@@ -963,6 +962,13 @@ static void app_loop(void)
             for (k = 0; k < 27u; k++)
                 if (held[k] != 255u && sense_is_analog(k)) {
                     uint32_t p = key_lean(k);
+                    if ((page == PG_KEYS || page == PG_KEYS2) && (fm1_ms & 64u)) {   /* the readout: rest, reading, lean (1/256 octave), pressure */
+                        char m[24] = "B     D     L    P   "; uint32_t b = p_base8[k] >> 8, d = sn_key[k].d, l = (b && d > SN_DBASE) ? (uint32_t)((int32_t)LOG2_Q8[b > 1023u ? 1023u : b] - (int32_t)LOG2_Q8[d - SN_DBASE > 1023u ? 1023u : d - SN_DBASE]) & 0xFFFu : 0;
+                        m[1] = (char)('0' + b / 1000u % 10u); m[2] = (char)('0' + b / 100u % 10u); m[3] = (char)('0' + b / 10u % 10u); m[4] = (char)('0' + b % 10u);
+                        m[7] = (char)('0' + d / 1000u % 10u); m[8] = (char)('0' + d / 100u % 10u); m[9] = (char)('0' + d / 10u % 10u); m[10] = (char)('0' + d % 10u);
+                        m[13] = (char)('0' + l / 100u % 10u); m[14] = (char)('0' + l / 10u % 10u); m[15] = (char)('0' + l % 10u);
+                        m[18] = (char)('0' + p / 100u % 10u); m[19] = (char)('0' + p / 10u % 10u); m[20] = (char)('0' + p % 10u); say(m);
+                    }
                     if (p != key_at_sent[k]) { key_at_sent[k] = (uint8_t)p; voices_pressure((int32_t)held[k], p); midi_send(0xA0, held[k], p); }
                 }
         }
