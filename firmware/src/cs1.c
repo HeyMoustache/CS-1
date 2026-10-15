@@ -817,10 +817,11 @@ static uint8_t p_on[27];
 /* the lean on a held key, 0..127 (after MONK-1's pressure(), in fixed point): counted from where the key RESTS, not where it
  * landed: a key goes on settling after the note. The zero follows the driven reading down quickly for 250 ms, then creeps
  * after it, and comes back up at once when the key is eased. The lean is the pill's resistance below its rest on a log
- * scale (the reading less the diode): 0.04 octave is noise, SENSIT sets how much more is full (0.8 octave down to 0.12). */
+ * scale (the reading less the diode): 0.08 octave is noise, SENSIT sets how much more is full (1.5 octaves down to 0.12),
+ * and the lean is squared on the way out: the top wants a real push. */
 static uint32_t key_lean(uint32_t k)
 {
-    uint32_t d, base, dead = 10, span = 205u - (uint32_t)set.key_at * 174u / 127u;   /* 1/256 octave: 0.8 .. 0.12 */
+    uint32_t d, base, dead = 20, span = 384u - (uint32_t)set.key_at * 353u / 127u;   /* 1/256 octave: 1.5 .. 0.12; 0.98 at the default */
     int32_t lean, x;
     if (sn_key[k].st != SN_DOWN || !sn_key[k].dn) { p_on[k] = 0; p_s[k] = 0; return 0; }
     d = sn_key[k].d > SN_DBASE + 1u ? sn_key[k].d - SN_DBASE : 1u;
@@ -832,6 +833,7 @@ static uint32_t key_lean(uint32_t k)
     lean = (int32_t)LOG2_Q8[base] - (int32_t)LOG2_Q8[d];
     x = ((lean - (int32_t)dead) << 15) / (int32_t)span;
     x = x < 0 ? 0 : x > 32767 ? 32767 : x;
+    x = (x * x) >> 15;                                                 /* squared: little for a light lean */
     p_s[k] += ((x - p_s[k]) * 10158) >> 15;                           /* ~30 ms */
     return (uint32_t)(p_s[k] * 127 + 16384) >> 15;
 }
