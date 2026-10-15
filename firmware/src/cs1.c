@@ -823,7 +823,7 @@ static uint32_t key_lean(uint32_t k)
 {
     uint32_t d, base, dead = 10, span = 256u - (uint32_t)set.key_at * 230u / 127u;   /* 1/256 octave: 1.0 .. 0.1; 0.35 at the default (92) */
     int32_t lean, x;
-    if (sn_key[k].st != SN_DOWN || !sn_key[k].dn) { p_on[k] = 0; p_s[k] = 0; return 0; }
+    if (sn_key[k].st != SN_DOWN || sn_key[k].d <= SN_DBASE) { p_on[k] = 0; p_s[k] = 0; return 0; }   /* no driven reading yet (or none at this DRIVE) */
     d = sn_key[k].d > SN_DBASE + 1u ? sn_key[k].d - SN_DBASE : 1u;
     if (d > 1023u) d = 1023u;
     if (!p_on[k]) { p_on[k] = 1; p_base8[k] = d << 8; p_t0[k] = fm1_ms; }
