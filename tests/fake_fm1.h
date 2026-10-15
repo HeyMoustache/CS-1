@@ -68,6 +68,7 @@ static int32_t fm1_adc_read(uint32_t ch) { return ch == FM1_ADC_MASTER ? fake_ma
 static uint32_t keys_analog_mask(void) { return 0; }          /* no analog rows on the fake: the keys are switches */
 static void keys_sense_set(uint32_t on, uint32_t drive) { (void)on; (void)drive; }
 static int keys_sense_live(void) { return 0; }
+static uint32_t midi_in_drops(void) { return 0; }
 
 /* ---- the LEDs: bit id, 0..13 the buttons, 14..40 the keys (KEY_LED) */
 static uint64_t fake_leds;

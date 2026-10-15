@@ -811,7 +811,7 @@ static uint32_t content_dirty;                   /* the page's content changed (
 static uint32_t strip_drawn = ~0u, strip_ms;
 static uint8_t held[27];                               /* the note each key plays (255: a tone button, not a note) */
 static uint32_t last_midi_ms;                    /* the last MIDI message that was not the clock: a flash save waits for quiet */
-static uint32_t midi_redraw;                     /* page knobs moved by MIDI this loop (bit k), bit 4 the drawing: redrawn once after the drain */
+static uint32_t midi_redraw, midi_stat_ms;                     /* page knobs moved by MIDI this loop (bit k), bit 4 the drawing: redrawn once after the drain */
 static uint8_t key_at_sent[27], last_vel, last_key;    /* the pressure last sent per key; the last landing (the KEYS pages' readout) */
 static uint32_t p_base8[27], p_t0[27];                 /* the pressure's zero per key: the resting reading (less the diode), 1/256; when the key landed */
 static int32_t p_s[27];                                /* the pressure, smoothed, Q15 */
@@ -1143,9 +1143,13 @@ static void app_loop(void)
             }
             if (tgt) *tgt = d2;
             set.patch = patch; changed();
-            if (page_drawn == page) { if (page == PG_HOME) draw_home(); else for (k = 0; k < 4u; k++) draw_param(k); }
-            tones_drawn = ~0u;
+            midi_redraw |= 15u;                         /* redrawn once after the drain, not per CC (a turned knob is a stream) */
         }
+    }
+    if (page == PG_MIDI && fm1_ms - midi_stat_ms > 500u) {   /* the TRS input's health: bytes lost in the ring, messages lost in the queue */
+        uint32_t d = midi_in_drops();
+        midi_stat_ms = fm1_ms;
+        if (d) { char m[24] = "TRS LOST     "; m[9] = (char)('0' + d / 1000u % 10u); m[10] = (char)('0' + d / 100u % 10u); m[11] = (char)('0' + d / 10u % 10u); m[12] = (char)('0' + d % 10u); say(m); }
     }
     if (midi_redraw) {                                 /* once, after the drain: a knob's stream of CCs no longer redraws per message */
         uint32_t k2;
