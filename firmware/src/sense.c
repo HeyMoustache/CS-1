@@ -66,7 +66,7 @@
  * for the main loop (sense_take). No HAL here: tests/host/sense_test.c runs it with synthetic
  * curves. */
 #include <stdint.h>
-#include "fastmath.h"
+#include "../gen/cs1_tables.h"           /* LOG2_Q8, EXP2N_Q15: the velocity map in fixed point (CS-1: no FPU in use) */
 
 #define SN_NKEYS 27
 #define SN_PRE 8
@@ -195,18 +195,32 @@ static uint8_t sense_velocity(uint32_t rel)
 /* the velocity of driven reading d on a key whose floor is fl and ceiling cl: the log scale (top) */
 static uint8_t sense_velocity_d(uint32_t d, uint32_t fl, uint32_t cl)
 {
-    float top = (float)(sn_cfg.vmax ? sn_cfg.vmax : 1u), r, r0, r1, t, c;
+    /* in fixed point (CS-1): t = log2(r / r0) / log2(r1 / r0) in Q15 from the 1/256 log table, then
+     * (1 - t)^c = 2^(c log2(1 - t)): the log of (1 - t) from the same table (1 - t in 1/1024), times the
+     * curve in 1/256, and 2^-x from its integer part (a shift) and its fraction (EXP2N_Q15) */
+    uint32_t top = sn_cfg.vmax ? sn_cfg.vmax : 1u, r, r0, r1, u;
+    int32_t lr, l0, l1, t, lu, m, k, pw;
     if (d <= fl)
         return (uint8_t)top;
     if (d >= cl || cl <= fl + 1u)
         return 1;
-    r = (float)(d > SN_DBASE ? d - SN_DBASE : 1u);
-    r0 = (float)(fl > SN_DBASE ? fl - SN_DBASE : 1u);
-    r1 = (float)(cl - SN_DBASE);
-    t = fm_log2f(r / r0) / fm_log2f(r1 / r0);
-    t = fm_clampf(t, 0.0f, 1.0f);
-    c = (float)(sn_cfg.d_curve ? sn_cfg.d_curve : 1u) * 0.01f;
-    return (uint8_t)(1.0f + (top - 1.0f) * fm_powf(1.0f - t, c) + 0.5f);
+    r = d > SN_DBASE ? d - SN_DBASE : 1u;
+    r0 = fl > SN_DBASE ? fl - SN_DBASE : 1u;
+    r1 = cl - SN_DBASE;
+    lr = LOG2_Q8[r > 1023u ? 1023u : r]; l0 = LOG2_Q8[r0 > 1023u ? 1023u : r0]; l1 = LOG2_Q8[r1 > 1023u ? 1023u : r1];
+    if (l1 <= l0)
+        return 1;
+    t = ((lr - l0) << 15) / (l1 - l0);
+    if (t <= 0)
+        return (uint8_t)top;
+    if (t >= 32767)
+        return 1;
+    u = (uint32_t)(32768 - t) >> 5;                   /* 1 - t, in 1/1024 */
+    lu = (int32_t)LOG2_Q8[u] - 2560;                  /* log2(1 - t), 1/256: 0 .. -2560 */
+    m = (lu * (int32_t)(sn_cfg.d_curve ? sn_cfg.d_curve : 1u) * 256 / 100) >> 8;   /* times the curve: -x in 1/256 */
+    k = -m >> 8;
+    pw = k >= 15 ? 0 : (int32_t)EXP2N_Q15[-m & 255] >> k;
+    return (uint8_t)(1u + (((top - 1u) * (uint32_t)pw + 16384u) >> 15));
 }
 
 /* aftertouch of a held key: 0 at its floor (pressed firmly), 127 at_range above it (eased off) */

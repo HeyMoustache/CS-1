@@ -32,10 +32,10 @@ enum { ENC_SELECT = 0, ENC_ALGORITHM = 1, ENC_KNOB1 = 2, ENC_KNOB2 = 3, ENC_KNOB
 #ifndef DINGHY_DUAL_CORE
 #define DINGHY_DUAL_CORE 1                      /* 1: CPU1 renders what the app hands it (audio_worker_submit) */
 #endif
-#if defined(DINGHY_HOST) || defined(DINGHY_WEB)
 /* the keys' velocity and pressure (Velo, charlesvestal/fm1-velocity, GPL-3.0): the sensing module is HAL-free, so it
  * is here for both builds; on the device the scan tick feeds it through the hooks below */
 #include "sense.c"
+#if defined(DINGHY_HOST) || defined(DINGHY_WEB)
 #include "../../tests/fake_fm1.h"              /* a fake FM-1 (the panel, the screen, MIDI in, the second core) ... */
 #ifdef DINGHY_HOST
 #include "../../tests/host.c"                  /* ... on a computer: a script, a WAV, PPM screens */
