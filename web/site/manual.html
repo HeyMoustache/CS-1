@@ -87,7 +87,7 @@
 
   <h2 id="midi">MIDI</h2>
   <div class="shot"><figure><img src="img/midi.png" alt="The MIDI page"><figcaption>The MIDI page: the channel, the expression CC, program change, the learned bindings.</figcaption></figure></div>
-  <p>CS-1 listens on USB and on the TRS jack alike. On the MIDI page (GLO twice) set <b>CHAN</b> to a channel or OMNI, <b>EXPR</b> to the CC that acts as pressure (AT means aftertouch only), and <b>PROG</b> to accept program change.</p>
+  <p>CS-1 listens on USB and on the TRS jack alike. A Circuit Tracks' eight macros send CC 80 to 87 as they come: the first four drive the four knobs of whatever page the FM-1 is showing, so turning the pages on the FM-1 re-aims them; the last four stay on brilliance, resonance, vibrato and the reverb. On the MIDI page (GLO twice) set <b>CHAN</b> to a channel or OMNI, <b>EXPR</b> to the CC that acts as pressure (AT means aftertouch only), and <b>PROG</b> to accept program change.</p>
   <h3>MIDI learn</h3>
   <p>Press <b>REC</b>, turn the panel knob you want to control (on whatever page), then move the controller's knob. That CC now sets that parameter whatever page is showing. Sixteen bindings, kept with the settings; <b>LEARNS</b> on the MIDI page counts them and clears them when turned down to 0. Binding a CC already used, or a parameter already bound, replaces the old one. REC again cancels.</p>
   <h3>The fixed map</h3>
@@ -101,7 +101,7 @@
     <tr><td class="k">72 / 73 / 75</td><td>VCA release / attack / decay, both channels</td></tr>
     <tr><td class="k">76 / 77</td><td>sub oscillator speed / vibrato depth</td></tr>
     <tr><td class="k">78</td><td>auto after touch level</td></tr>
-    <tr><td class="k">80 – 83</td><td>the page's KNOB 1 – 4 (absolute)</td></tr>
+    <tr><td class="k">80 – 83</td><td>the page's KNOB 1 – 4, whatever page is showing, with pickup: after a page change a knob takes hold only once it reaches or passes the parameter's value, so nothing jumps</td></tr>
     <tr><td class="k">84 / 85 / 86 / 87</td><td>brilliance / resonance / vibrato / reverb mix</td></tr>
     <tr><td class="k">91 / 93 / 94 / 95</td><td>reverb / chorus depth / delay mix / shimmer</td></tr>
     <tr><td class="k">120 / 123</td><td>all notes off</td></tr>

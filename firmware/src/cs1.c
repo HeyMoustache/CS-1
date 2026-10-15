@@ -811,7 +811,8 @@ static uint32_t content_dirty;                   /* the page's content changed (
 static uint32_t strip_drawn = ~0u, strip_ms;
 static uint8_t held[27];                               /* the note each key plays (255: a tone button, not a note) */
 static uint32_t last_midi_ms;                    /* the last MIDI message that was not the clock: a flash save waits for quiet */
-static uint32_t midi_redraw, midi_stat_ms;                     /* page knobs moved by MIDI this loop (bit k), bit 4 the drawing: redrawn once after the drain */
+static uint32_t midi_redraw, midi_stat_ms;
+static uint8_t cc_latched[4], cc_last[4], cc_page = 255;   /* CC 80..83 pickup: a knob takes hold of the page's parameter once it passes through its value */                     /* page knobs moved by MIDI this loop (bit k), bit 4 the drawing: redrawn once after the drain */
 static uint8_t key_at_sent[27], last_vel, last_key;    /* the pressure last sent per key; the last landing (the KEYS pages' readout) */
 static uint32_t p_base8[27], p_t0[27];                 /* the pressure's zero per key: the resting reading (less the diode), 1/256; when the key landed */
 static int32_t p_s[27];                                /* the pressure, smoothed, Q15 */
@@ -1066,7 +1067,7 @@ static void app_loop(void)
             p = param_ptr(d);
             v = clamp((int32_t)*p + n * (d->max > 16u ? 2 : 1), 0, d->max);
             if (p == &set.nlearn) { if (n < 0 && set.nlearn) { set.nlearn = 0; changed(); say("LEARNS CLEARED"); draw_param(k); } continue; }
-            if (v != *p) { *p = (uint8_t)v; set.patch = patch; changed(); if (page == PG_HOME) draw_home(); else draw_param(k); tones_drawn = ~0u; if (page_has_drawing()) draw_shape(); }
+            if (v != *p) { *p = (uint8_t)v; cc_latched[k] = 0; set.patch = patch; changed(); if (page == PG_HOME) draw_home(); else draw_param(k); tones_drawn = ~0u; if (page_has_drawing()) draw_shape(); }
         }
 
     while (midi_get(&st, &d1, &d2)) {                  /* MIDI in (USB or TRS) */
@@ -1117,11 +1118,23 @@ static void app_loop(void)
             switch (d1) {
             case 64: sustain_set(d2 >= 64u); continue;
             case 120: case 123: sustain_set(0); for (k = 0; k < 128u; k++) voice_off(k); continue;
-            case 80: case 81: case 82: case 83: {                       /* the page's four parameters */
+            case 80: case 81: case 82: case 83: {                       /* the page's four parameters, with pickup */
                 const pdesc_t *d = &PAGES[page].p[d1 - 80u];
+                uint32_t j = d1 - 80u, v, cur;
                 if (!d->name) continue;
                 tgt = param_ptr(d);
-                *tgt = (uint8_t)(d->max == 127u ? d2 : (d2 * (d->max + 1u)) >> 7);
+                v = d->max == 127u ? d2 : (d2 * (d->max + 1u)) >> 7;
+                cur = *tgt;
+                if (page != cc_page) { cc_page = (uint8_t)page; cc_latched[0] = cc_latched[1] = cc_latched[2] = cc_latched[3] = 0; }
+                if (!cc_latched[j]) {                                   /* not yet: only once the knob reaches or crosses the value */
+                    uint32_t near = (v > cur ? v - cur : cur - v) <= (d->max > 16u ? 3u : 0u);
+                    uint32_t crossed = (cc_last[j] < cur && v >= cur) || (cc_last[j] > cur && v <= cur);
+                    cc_last[j] = (uint8_t)v;
+                    if (!near && !crossed) continue;
+                    cc_latched[j] = 1;
+                }
+                cc_last[j] = (uint8_t)v;
+                *tgt = (uint8_t)v;
                 set.patch = patch; changed(); midi_redraw |= 1u << (d1 - 80u);
                 continue;
             }
