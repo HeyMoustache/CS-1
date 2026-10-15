@@ -88,6 +88,7 @@ typedef struct {
     uint16_t d_ceil;                   /* driven velocity: the reading of the lightest press that seats (= 1) */
     uint16_t d_at_range;               /* driven aftertouch: the drop below the landing that means 127 */
     uint16_t t_lo, t_hi;               /* the top row: the probe's rise above its baseline that means 1, and 127 */
+    uint8_t learn;                     /* the per-key calibration (sense_learn) on; off (MONK-1's finding: it played more extremes) */
 } sense_cfg_t;
 
 typedef struct {
@@ -132,7 +133,7 @@ typedef struct {
     uint8_t dt_ms;                     /* on: touch to the velocity sample; off: lift to release, in ms */
 } sense_ev_t;
 
-static sense_cfg_t sn_cfg = {900, 400, 600, 1, 0, 72, 127, 32, 24000, 0, 70, 1000, 64, 20, 48};
+static sense_cfg_t sn_cfg = {900, 400, 600, 1, 0, 72, 127, 32, 24000, 0, 70, 1000, 64, 20, 48, 0};
 #define SN_FLOOR0 190u                 /* a key's floor before it has been played hard */
 /* the driven floor before a key has seated lower, by DRIVE level: a little above the firm presses
  * measured on key 3 (389 / 547 / 740 / 805 at levels 1..4; keys differ by up to ~120). The floor
@@ -297,6 +298,8 @@ static void sense_cal_ceil_all(void)
 static void sense_learn(sense_key_t *k, uint32_t m)
 {
     uint32_t early = k->nland < 16u, step = early ? 64u << 4 : 24u << 4, f = k->f16, c = k->c16, m16 = m << 4;
+    if (!sn_cfg.learn)
+        return;
     uint32_t creep = early ? step / 8u : step / 32u, jump = step - creep;
     if (m16 < f)
         f -= (f - m16 < jump ? f - m16 : jump);

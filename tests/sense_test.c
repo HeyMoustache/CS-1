@@ -39,6 +39,7 @@ int main(void)
     sense_ev_t e;
     uint8_t v_fast, v_mid, v_slow;
     sense_init(0xFFFFFu);
+    sn_cfg.learn = 1;                          /* the calibration is tested too (MONK-1 runs with it off) */
     now = 1000;
     settle(3, 20);
 

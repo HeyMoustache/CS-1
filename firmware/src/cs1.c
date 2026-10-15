@@ -118,7 +118,7 @@ static const page_t PAGES[NPAGE] = {
                 ST(pc_on, "PROG", 1, K_ONOFF, CK, "", ""), ST(nlearn, "LEARNS", 16, K_NUM, CK, "", "")}},
     {"KEYS",   {ST(key_sense, "SENSE", 1, K_ONOFF, CK, "", ""), ST(key_drive, "DRIVE", 4, K_NUM, CW, "4", "0"),
                 ST(key_curve, "CURVE", 127, K_NUM, CG, "SOFT", "HARD"), ST(key_light, "LIGHT", 127, K_NUM, CW, "HIGH", "LOW")}},
-    {"KEYS 2", {ST(key_at, "AT RNG", 127, K_NUM, CG, "WIDE", "TIGHT"), ST(key_topvel, "TOP VEL", 127, K_NUM, CW, "127", "1"), NONE, NONE}},
+    {"KEYS 2", {ST(key_at, "SENSIT", 127, K_NUM, CG, "HIGH", "LOW"), ST(key_topvel, "TOP VEL", 127, K_NUM, CW, "127", "1"), NONE, NONE}},
 };
 /* the pages a button cycles through, for the "2/4" in the header: {first, count} by page */
 static const uint8_t PAGE_GROUP[NPAGE][2] = {
@@ -811,13 +811,36 @@ static uint32_t content_dirty;                   /* the page's content changed (
 static uint32_t strip_drawn = ~0u, strip_ms;
 static uint8_t held[27];                               /* the note each key plays (255: a tone button, not a note) */
 static uint8_t key_at_sent[27], last_vel, last_key;    /* the pressure last sent per key; the last landing (the KEYS pages' readout) */
+static uint32_t p_base8[27], p_t0[27];                 /* the pressure's zero per key: the resting reading (less the diode), 1/256; when the key landed */
+static int32_t p_s[27];                                /* the pressure, smoothed, Q15 */
+static uint8_t p_on[27];
+/* the lean on a held key, 0..127 (after MONK-1's pressure(), in fixed point): counted from where the key RESTS, not where it
+ * landed: a key goes on settling after the note. The zero follows the driven reading down quickly for 250 ms, then creeps
+ * after it, and comes back up at once when the key is eased. The lean is the pill's resistance below its rest on a log
+ * scale (the reading less the diode): 0.04 octave is noise, SENSIT sets how much more is full (0.8 octave down to 0.12). */
+static uint32_t key_lean(uint32_t k)
+{
+    uint32_t d, base, dead = 10, span = 205u - (uint32_t)set.key_at * 174u / 127u;   /* 1/256 octave: 0.8 .. 0.12 */
+    int32_t lean, x;
+    if (sn_key[k].st != SN_DOWN || !sn_key[k].dn) { p_on[k] = 0; p_s[k] = 0; return 0; }
+    d = sn_key[k].d > SN_DBASE + 1u ? sn_key[k].d - SN_DBASE : 1u;
+    if (d > 1023u) d = 1023u;
+    if (!p_on[k]) { p_on[k] = 1; p_base8[k] = d << 8; p_t0[k] = fm1_ms; }
+    if ((d << 8) > p_base8[k]) p_base8[k] = d << 8;                 /* eased off: that is the rest now */
+    else p_base8[k] -= ((p_base8[k] - (d << 8)) * (fm1_ms - p_t0[k] < 250u ? 28672u : 105u)) >> 16;   /* a 10 ms step */
+    base = p_base8[k] >> 8; if (base > 1023u) base = 1023u; if (base < 1u) base = 1u;
+    lean = (int32_t)LOG2_Q8[base] - (int32_t)LOG2_Q8[d];
+    x = ((lean - (int32_t)dead) << 15) / (int32_t)span;
+    x = x < 0 ? 0 : x > 32767 ? 32767 : x;
+    p_s[k] += ((x - p_s[k]) * 10158) >> 15;                           /* ~30 ms */
+    return (uint32_t)(p_s[k] * 127 + 16384) >> 15;
+}
 static uint32_t at_poll_ms;
 static void keys_apply(void)                        /* the KEYS pages into the sensing module and the scan */
 {
     sn_cfg.drive = set.key_drive > 4u ? 4u : set.key_drive;
     sn_cfg.d_curve = (uint16_t)(40u + (uint32_t)set.key_curve * 80u / 127u);      /* 0.40 .. 1.20 */
     sn_cfg.d_ceil = (uint16_t)(600u + (uint32_t)set.key_light * 3u);              /* 600 .. 981: the lightest seated press */
-    sn_cfg.d_at_range = (uint16_t)(16u + (uint32_t)set.key_at);                   /* 16 .. 143 counts below the landing = full */
     keys_sense_set(set.key_sense, set.key_drive);
 }
 static int32_t rib_pos256;                       /* the ribbon's position, 1/256 semitone */
@@ -937,7 +960,7 @@ static void app_loop(void)
             at_poll_ms = fm1_ms;
             for (k = 0; k < 27u; k++)
                 if (held[k] != 255u && sense_is_analog(k)) {
-                    uint32_t p = sense_pressure(k);
+                    uint32_t p = key_lean(k);
                     if (p != key_at_sent[k]) { key_at_sent[k] = (uint8_t)p; voices_pressure((int32_t)held[k], p); midi_send(0xA0, held[k], p); }
                 }
         }
