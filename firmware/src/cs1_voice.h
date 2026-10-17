@@ -62,6 +62,7 @@ typedef struct {
     int32_t at16;                 /* the pressure the last block ended on (Q15): a step in it ramps over the block */
     uint8_t fstage, vstage;       /* 0 attack 1 decay 2 rest 3 release; 0 off 1 attack 2 decay 3 sustain 4 release */
     svf_t hp, lp;
+    int32_t hp_key, lp_key;       /* the cutoff and damping the coefficients were made for: a held note skips the divide */
 } chan_state_t;
 typedef struct {
     volatile uint8_t note, vel, gate;   /* the main loop's: the note, its velocity, held (0: released) */
@@ -210,7 +211,8 @@ static void chan_render(voice_t *v, uint32_t ch, int32_t *mix)
     int32_t h1 = s->h1, h2 = s->h2, l1 = s->l1, l2 = s->l2;
     int32_t bal = ch ? (patch.mix < 64u ? patch.mix * 2 : 127) : (patch.mix > 64u ? (127 - patch.mix) * 2 : 127);
     int32_t lo_w = v->note < 60u ? 60 - (int32_t)v->note : 0, hi_w = v->note > 60u ? (int32_t)v->note - 60 : 0;   /* 0 .. 36 */
-    int32_t kbc16 = (((int32_t)patch.kb_bl - 64) * lo_w + ((int32_t)patch.kb_bh - 64) * hi_w) / 6;   /* +-24 semitones at the ends */
+    int32_t kbe = ((int32_t)patch.kb_bl - 64) * lo_w + ((int32_t)patch.kb_bh - 64) * hi_w;              /* +-24 semitones at the ends */
+    int32_t kbc16 = kbe < 0 ? -((-kbe * 10923) >> 16) : (kbe * 10923) >> 16;                           /* (/ 6, exact on +-4536) */
     int32_t kbc_lv = clamp(32767 + (((int32_t)patch.kb_ll - 64) * lo_w + ((int32_t)patch.kb_lh - 64) * hi_w) * 14, 0, 32767);
     int32_t level = mulq15(mulq15(p->level * 258, bal * 258), kbc_lv), sine_lv = p->sine * 258, noise_lv = p->noise * 258, vcf_lv = p->vcf_lv * 258;
     int32_t vel = v->vel, at_to = v->at_eff, at_from = s->at16;    /* the pressure: ramped over the block (Q15) */
@@ -221,6 +223,10 @@ static void chan_render(voice_t *v, uint32_t ch, int32_t *mix)
     int32_t pitch256 = v->pitch256 + v->pb256 + FEET_SEMIS[p->feet] * 256 + (ch ? ((int32_t)patch.detune - 64) * 2 : 0);
     int32_t vca_depth = patch.lfo_vca * 258;
     s->at16 = at_to;
+    if (!level && !s->amp) {                            /* a channel at no level (LEVEL 0, MIX hard over): the envelopes run, nothing renders */
+        for (t = 0; t < NTICK; t++) { venv_tick(s, p, v->gate); fenv_tick(s, p, v->gate); }
+        goto done;
+    }
     for (t = 0; t < NTICK; t++) {
         int32_t lfo = g_lfo[t], amp0 = s->amp, amp1, cut16, hp_k, lp_k, pw_d;
         int32_t at = at_from + (((at_to - at_from) * (int32_t)(t + 1u)) >> 3);   /* this tick's pressure, Q15 */
@@ -228,8 +234,8 @@ static void chan_render(voice_t *v, uint32_t ch, int32_t *mix)
         int32_t touch16 = itouch16 + ((mulq15(at, p->at_brill * 258) * 576) >> 15);   /* AFTER BRILLIANCE: +36 semitones */
         int32_t vco_k = clamp((int32_t)patch.lfo_vco + (mulq15(at, patch.at_vco * 258) >> 8), 0, 127);   /* AFTER VCO: vibrato */
         int32_t vcf_k = clamp((int32_t)patch.lfo_vcf + (mulq15(at, patch.at_vcf * 258) >> 8), 0, 127);   /* AFTER VCF */
-        int32_t vco_depth = vco_k * vco_k / 504;       /* up to +-2 semitones (1/16) */
-        int32_t vcf_depth = vcf_k * vcf_k / 42;        /* up to +-24 semitones */
+        int32_t vco_depth = (vco_k * vco_k * 16645) >> 23;   /* / 504, exact: up to +-2 semitones (1/16) */
+        int32_t vcf_depth = (vcf_k * vcf_k * 24967) >> 20;   /* / 42, exact: up to +-24 semitones */
         uint32_t inc, pw;
         venv_tick(s, p, v->gate);
         fenv_tick(s, p, v->gate);
@@ -252,13 +258,19 @@ static void chan_render(voice_t *v, uint32_t ch, int32_t *mix)
         cut16 = (s->fenv >> 8) + brill16 + ((lfo * vcf_depth) >> 15) + kbd16 + kbc16 + touch16;   /* (vcf_depth is in 1/16 semitone already) */
         hp_k = SVF_K(clamp(p->hp_res + reso, 0, 127));
         lp_k = SVF_K(clamp(p->lp_res + reso, 0, 127));
-        svf_coef(&s->hp, 128 + p->hp_cut * 15 + cut16, hp_k);   /* knob: MIDI 8 .. 127 (13 Hz .. 12.5 kHz) */
-        svf_coef(&s->lp, 256 + p->lp_cut * 15 + cut16, lp_k);   /* knob: MIDI 16 .. 135 (20 Hz .. 19 kHz) */
+        {                                              /* the coefficients only when the cutoff or damping moved (a held note: most ticks) */
+            int32_t hc = 128 + p->hp_cut * 15 + cut16, lc = 256 + p->lp_cut * 15 + cut16;   /* knobs: MIDI 8 .. 127 (13 Hz .. 12.5 kHz), 16 .. 135 (20 Hz .. 19 kHz) */
+            int32_t hk = hc * 16384 + hp_k, lk = lc * 16384 + lp_k;
+            if (hk != s->hp_key) { s->hp_key = hk; svf_coef(&s->hp, hc, hp_k); }
+            if (lk != s->lp_key) { s->lp_key = lk; svf_coef(&s->lp, lc, lp_k); }
+        }
         for (i = 0; i < CTL; i++) {
             int32_t x, lp, hp, amp = amp0 + (((amp1 - amp0) * (int32_t)i) >> 5);
-            x = wave == W_PULSE ? osc_pulse(ph, inc, pw) : osc_saw(ph, inc);
-            if (wave == W_BOTH)
-                x = (x + osc_pulse(ph, inc, pw)) >> 1;
+            x = osc_saw(ph, inc);
+            if (wave != W_SAW) {                       /* the pulse from the same sawtooth: one blep saved on BOTH */
+                int32_t pl = (x - osc_saw(ph + pw, inc)) >> 1;
+                x = wave == W_PULSE ? pl : (x + pl) >> 1;
+            }
             if (noise_lv)
                 x += mulq15(g_noise[t * CTL + i], noise_lv);
             svf_step(&s->hp, x, &h1, &h2, &lp, &hp);

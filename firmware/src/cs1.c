@@ -937,11 +937,16 @@ static void app_init(void)
     lcd_fill(0, 0, 240, 240, C_PANEL);
 }
 
+static uint8_t keys_cfg_seen[6];                       /* the KEYS settings the scan was last set up for */
 static void app_loop(void)
 {
     uint32_t live;
     tone_set = set.rolloff;
-    keys_apply();
+    {                                                  /* the sensing set up when its six settings change, not every pass */
+        const uint8_t *kc = &set.key_sense; uint32_t i, same = 1;
+        for (i = 0; i < 6u; i++) if (kc[i] != keys_cfg_seen[i]) { keys_cfg_seen[i] = kc[i]; same = 0; }
+        if (!same) keys_apply();
+    }
     uint32_t keys, down, up, rel, b, k, lit = 0, sounding, nv = 0, load;
     uint32_t base = (uint32_t)(KEY0 + 12 * oct());
     uint8_t st, d1, d2;

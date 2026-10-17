@@ -74,7 +74,7 @@ static inline uint32_t noise32(uint32_t *st)        /* xorshift32 */
 /* the phase increment of a pitch: whole 1/16 semitones from the top octave's table, shifted down */
 static inline uint32_t pitch_inc(int32_t pitch16)
 {
-    uint32_t p = (uint32_t)clamp(pitch16, 0, 2047), oct = p / 192u;
+    uint32_t p = (uint32_t)clamp(pitch16, 0, 2047), oct = (p * 683u) >> 17;   /* / 192, exact to 2047 */
     return PITCH16[p - oct * 192u] >> (10u - oct);
 }
 /* in 1/256 semitone: the rest as a factor 2^(r / 3072) ~ 1 + r x 14.8 / 65536 */
