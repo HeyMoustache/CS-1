@@ -25,7 +25,7 @@ for m in re.finditer(r'\{"([^"]+)",\s*\{(.*?)\}\},', block, re.S):
 
 CAP = {"CW": "w", "CG": "g", "CR": "r", "CK": "k", "CY": "y", "CS": "s"}
 GROUP = {"TONES": "HOME", "VCO": "EDIT", "VCO 2": "EDIT", "VCF": "EDIT", "VCF EG": "EDIT", "VCA EG": "EDIT", "VCA": "EDIT", "TOUCH": "EDIT",
-         "SUB OSC": "LFO", "SUB OSC 2": "LFO", "TOUCH RESP": "LFO", "AUTO AT": "LFO", "PERFORM": "ARP", "KEYBOARD": "ARP", "SUSTAIN": "ARP", "RIBBON": "ARP",
+         "SUB OSC": "LFO", "SUB OSC 2": "LFO", "TOUCH RESP": "LFO", "AUTO AT": "LFO", "PERFORM": "ARP", "KEYBOARD": "ARP", "MODES": "ARP", "RIBBON": "ARP",
          "RING MOD": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "REVERB 2": "FX", "PHASER": "FX", "MAIN": "GLO", "MIDI": "GLO", "KEYS": "GLO", "KEYS 2": "GLO"}
 PAGE_NOTE = {
     "TONES": "The HOME page: the two rows of tone buttons, the sound's name, and the lower panel's performance levers.",
@@ -42,7 +42,7 @@ PAGE_NOTE = {
     "AUTO AT": "A pressure curve every note plays by itself, for when nothing sends aftertouch: a wait, a rise to a level, a fall after the key goes. SEQ switches it on and off.",
     "PERFORM": "Portamento and glissando, channel II's detune, and VINTAGE: each voice drifting a few cents of its own.",
     "KEYBOARD": "Keyboard control: brilliance and level tilted towards the low or the high end of the keyboard. Nothing at middle C, full effect three octaves out.",
-    "SUSTAIN": "Mode I sustains every note on its own; mode II ends the sustain of the chord before when a new one is played.",
+    "MODES": "The sustain mode: I sustains every note on its own, II ends the sustain of the chord before when a new one is played. UNISON plays two voices a note, a little flat and a little sharp, for four-note polyphony. VELOC is the curve MIDI velocity comes through.",
     "KEYS": "Velocity and pressure from the FM-1's own keys (Velo's sensing): twenty of the keys, F3 to C5, sit on rows the chip can measure; the carbon pill under each reads softer or harder as you press. Instrument settings.",
     "KEYS 2": "The pressure range and the top row's fixed velocity.",
     "RIBBON": "The SELECT encoder is the ribbon: turning it bends the pitch of everything sounding, as the CS-80's ribbon did. Instrument settings.",
@@ -53,7 +53,7 @@ PAGE_NOTE = {
     "REVERB 2": "The shimmer's interval.",
     "PHASER": "A six-stage phaser, the right side a quarter turn behind the left. Not on the CS-80; of its era.",
     "REVERB": "A plate after Dattorro: diffused input, two cross-coupled tanks with slowly wandering allpasses, damping in the loop. With a shimmer: the output fed back an octave up.",
-    "MAIN": "The lower panel's levers: brilliance and resonance offsets for every filter, TONE, the output level. TONE is an instrument setting rather than part of a sound. The firmware's version sits in the header.",
+    "MAIN": "The instrument's own settings: master tune, transpose, TONE and the output level. The firmware's version sits in the header.",
     "MIDI": "The channel listened to, which CC acts as pressure, program change on or off, and the learned CC bindings (turn down to clear).",
 }
 DESC = {
@@ -81,7 +81,7 @@ DESC = {
     ("PERFORM", "DETUNE"): "Channel II sharp or flat against I, about half a semitone each way.", ("PERFORM", "VINTAG"): "Vintage: each voice wanders to a new tuning offset every second or so, up to 12 cents.",
     ("KEYBOARD", "BRIL.LO"): "Brighter (+) or darker (−) towards the bottom of the keyboard.", ("KEYBOARD", "BRIL.HI"): "The same towards the top.",
     ("KEYBOARD", "LEV.LO"): "Louder or quieter towards the bottom (it can only cut).", ("KEYBOARD", "LEV.HI"): "The same towards the top.",
-    ("SUSTAIN", "MODE"): "I or II.",
+    ("MODES", "SUSTAIN"): "I or II.", ("MODES", "UNISON"): "Two voices a note, this far apart: up to a quarter tone at full. Off at 0. On, the polyphony is four notes.", ("MODES", "VELOC"): "The MIDI velocity curve: 64 is as played, lower makes a light touch louder, higher needs a harder hit.",
     ("KEYS", "SENSE"): "ON: the sensed keys play with velocity and send polyphonic pressure; OFF: every key plays at velocity 100, as a switch.", ("KEYS", "DRIVE"): "How hard the row is driven while a key is read, 1 to 4; 2 measured best (firm presses repeat within a few counts). 0 reads through the pull-up alone, which barely tells presses apart.", ("KEYS", "CURVE"): "The velocity curve's bend: HARD makes a given press play louder, SOFT quieter. Free playing should sit around 60.", ("KEYS", "LIGHT"): "The reading of the lightest press that still plays: velocity 1. Lower it if soft notes come out louder than you mean.",
     ("KEYS 2", "SENSIT"): "How much lean is full pressure, counted from where the key rests (the zero follows the key as it settles) and curved so a light lean does little: LOW wants a hard press, HIGH a squeeze.", ("KEYS 2", "TOP VEL"): "The velocity of the seven top keys, C#5 to G5, which have no measurable row.",
     ("RIBBON", "HOLD"): "OFF: the spring returns the bend to centre when the knob is still. ON: it stays where you leave it, and turning back through centre lands exactly on it.", ("RIBBON", "RANGE"): "How far a detent bends: 5 cents at FINE to two semitones at WIDE (two octaves at most).", ("RIBBON", "RETURN"): "The spring's time back to centre, 50 ms to 5 s (when HOLD is off).", ("RIBBON", "DELAY"): "How long the bend stays put after the knob goes still before the spring takes it back: none to 3 s, finer at the short end. The default is about 150 ms.",
@@ -98,7 +98,7 @@ DESC = {
     ("DELAY 2", "TEMPO"): "The tempo the clock gives, in brackets when no clock has arrived for two seconds (120 at power-on).",
     ("REVERB", "MIX"): "The reverb's level; 0 is off.", ("REVERB", "SIZE"): "The decay, half a second to about 25 s.",
     ("REVERB", "DAMP"): "Darkens the tail.", ("REVERB", "SHIMMR"): "Feeds the tail back an octave up: it climbs in octaves. Its loop never runs away.",
-    ("MAIN", "BRILL"): "As on HOME.", ("MAIN", "RESO"): "As on HOME.", ("MAIN", "TONE"): "A gentle 12 dB per octave roll-off above the filters, as the instrument's output stage has it: off at 0, 2.4 kHz at 100 (the CS-80 V's, measured), 1.6 kHz at full. It takes the glass off the sawtooth; BRILL on HOME still opens the filters under it.", ("MAIN", "VOLUME"): "As on HOME.",
+    ("MAIN", "TUNE"): "Master tune, about a semitone either way in steps of 1.6 cents. 0 is A440.", ("MAIN", "TRANS"): "Transpose, up to two octaves either way in semitones.", ("MAIN", "TONE"): "A gentle 12 dB per octave roll-off above the filters, as the instrument's output stage has it: off at 0, 2.4 kHz at 100 (the CS-80 V's, measured), 1.6 kHz at full. It takes the glass off the sawtooth; BRILL on HOME still opens the filters under it.", ("MAIN", "VOLUME"): "As on HOME.",
     ("MIDI", "CHAN"): "OMNI, or a channel 1 to 16.", ("MIDI", "EXPR"): "AT only, or a CC number that also acts as pressure (CC 1 by default).",
     ("MIDI", "PROG"): "Program change on or off.", ("MIDI", "LEARNS"): "How many CCs are bound to parameters; turn it down to 0 to clear them.",
 }
@@ -196,7 +196,7 @@ for title, params in pages:
     w('<table><tr><th>Knob</th><th>Name</th><th>Range</th><th>What it does</th></tr>')
     for i, p in enumerate(params):
         rng = f'{p["lo"]} … {p["hi"]}' if p["hi"] or p["lo"] else {"K_FEET": "16' 8' 5.3' 4' 2.7' 2'", "K_WAVE": "SAW PULSE BOTH", "K_LWAVE": "SINE TRI SAW SAW DN SQR", "K_ONOFF": "OFF ON",
-                                                                  "K_CHO": "OFF CHORUS TREM", "K_DIV": "FREE 1/16 … 1/2", "K_LDIV": "FREE 1/4 … 4 BAR", "K_SUS": "I II", "K_TEMPO": "(read-only)"}.get(p["kind"], "0 … 127")
+                                                                  "K_CHO": "OFF CHORUS TREM", "K_DIV": "FREE 1/16 … 1/2", "K_LDIV": "FREE 1/4 … 4 BAR", "K_SUS": "I II", "K_TEMPO": "(read-only)", "K_CENT": "-98 … +98 cents", "K_SEMI": "-24 … +24"}.get(p["kind"], "0 … 127")
         scope = {"CH": "channel", "GL": "global", "ST": "setting"}[p["scope"]]
         w(f'<tr><td class="k">KNOB {i + 1}</td><td class="k"><span class="cap {CAP[p["color"]]}"></span>{html.escape(p["name"])}</td><td>{html.escape(rng)}<br><small>{scope}</small></td><td>{html.escape(DESC.get((title, p["name"]), ""))}</td></tr>')
     w('</table>')

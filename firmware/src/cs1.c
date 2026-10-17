@@ -13,8 +13,8 @@
  *   SAVE        the panel into a user preset: SAVE, pick the slot on PRESETS, SAVE again (HOME cancels). A star after
  *               the sound's name: the panel differs from it; PRESETS a click away and back reloads it
  *   MIDI clock  the delay's SYNC (DELAY page) and the sub oscillator's (SUB OSC 2) follow it; start resets the LFO
- *   ARP         PERFORM, KEYBOARD (brilliance and level across the keys), SUSTAIN (mode I / II: II ends the
- *               sustain of the chord before when a new one is played)
+ *   ARP         PERFORM, KEYBOARD (brilliance and level across the keys), MODES (sustain I / II: II ends the
+ *               sustain of the chord before when a new one is played; UNISON; the MIDI velocity curve), RIBBON
  *   SEQ         auto after touch on / off (its LED; AUTO in HOME's header); OCT- with OCT+ all notes off
  *   REC         MIDI learn: REC, turn the panel knob to control, move the controller's knob: that CC is bound to
  *               that parameter (16 bindings, kept with the settings; the MIDI page's LEARNS clears them)
@@ -25,7 +25,7 @@
  *   EDIT        the next channel page (VCO, MIX, VCF, F.ENV, VCA, TOUCH, CHAN); HOME the first; ENV F.ENV / VCA;
  *               LFO the sub oscillator / its pressure page / AUTO AT (a pressure curve every note plays by itself);
  *               FX the ring modulator / chorus / delay / reverb pages; ARP the PLAY page
- *               (portamento, glissando, channel II detune, initial pitch bend); GLO the MAIN page
+ *               (portamento, glissando, channel II detune, initial pitch bend); GLO the MAIN page (tune, transpose, TONE, volume)
  *   SEL         channel I / II (its LED lit for II)
  *   MASTER      the volume (platform.c)
  * The panel (octave, channel, tones and patch) is kept in flash 2 s after the last change, once nothing sounds.
@@ -53,6 +53,7 @@ typedef struct {                                      /* what survives a power-o
     uint8_t rib_delay;                               /* the ribbon: how long the bend waits before the spring takes it (0 .. 3 s) */
     uint8_t key_sense, key_drive, key_curve, key_light, key_at, key_topvel;   /* the keys' own velocity and pressure (Velo): on, DRIVE 1..4, the curve, the lightest press, the pressure range, the top row's fixed velocity */
     uint8_t rolloff;                                 /* TONE: the fixed roll-off above the filters (0 = off, 100 = the CS-80 V's) */
+    uint8_t tune, trans, vel_curve;                  /* MAIN: master tune (64 = A440, +-98 cents), transpose (24 = none, +-24 semitones); MODES: the MIDI velocity curve (64 linear) */
     struct { uint8_t cc, page, knob; } learn[16];
     patch_t patch;
 } settings_t;
@@ -60,7 +61,7 @@ static settings_t set;
 
 /* ---- the panel: pages of four parameters, in the CS-80's sections; each a slider with the panel's cap colour
  * and its top / bottom legend */
-enum { K_NUM = 0, K_BIP, K_FEET, K_WAVE, K_LWAVE, K_ONOFF, K_CHO, K_MCHAN, K_EXPR, K_DIV, K_LDIV, K_TEMPO, K_SUS };   /* how a value is shown */
+enum { K_NUM = 0, K_BIP, K_FEET, K_WAVE, K_LWAVE, K_ONOFF, K_CHO, K_MCHAN, K_EXPR, K_DIV, K_LDIV, K_TEMPO, K_SUS, K_CENT, K_SEMI };   /* how a value is shown */
 enum { CW = 0, CG, CR, CK, CY, CS };                  /* a cap: white, green, red, black (a stripe), yellow, silver */
 typedef struct { const char *name; uint8_t off, max, kind, global, color; const char *hi, *lo; } pdesc_t;   /* global 2: settings */
 #define CH(f, name, max, kind, c, hi, lo) {name, (uint8_t)offsetof(chan_patch_t, f), max, kind, 0, c, hi, lo}
@@ -97,7 +98,8 @@ static const page_t PAGES[NPAGE] = {
                  GL(detune, "DETUNE", 127, K_BIP, CW, "+", "-"), GL(vintage, "VINTAG", 127, K_NUM, CW, "10", "0")}},
     {"KEYBOARD", {GL(kb_bl, "BRIL.LO", 127, K_BIP, CG, "+", "-"), GL(kb_bh, "BRIL.HI", 127, K_BIP, CG, "+", "-"),
                   GL(kb_ll, "LEV.LO", 127, K_BIP, CS, "+", "-"), GL(kb_lh, "LEV.HI", 127, K_BIP, CS, "+", "-")}},
-    {"SUSTAIN", {ST(sus2, "MODE", 1, K_SUS, CK, "", ""), NONE, NONE, NONE}},
+    {"MODES",  {ST(sus2, "SUSTAIN", 1, K_SUS, CK, "", ""), GL(unison, "UNISON", 127, K_NUM, CW, "WIDE", "OFF"),
+                ST(vel_curve, "VELOC", 127, K_NUM, CG, "HARD", "SOFT"), NONE}},
     {"RIBBON",  {ST(rib_hold, "HOLD", 1, K_ONOFF, CK, "", ""), ST(rib_range, "RANGE", 127, K_NUM, CW, "WIDE", "FINE"), ST(rib_return, "RETURN", 127, K_NUM, CK, "SLOW", "FAST"), ST(rib_delay, "DELAY", 127, K_NUM, CK, "LONG", "NONE")}},
     {"RING MOD", {GL(rm_mod, "MOD", 127, K_NUM, CS, "10", "0"), GL(rm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
                   GL(rm_depth, "DEPTH", 127, K_NUM, CW, "10", "0"), GL(rm_a, "ATTACK", 127, K_NUM, CK, "LONG", "SHORT")}},
@@ -112,7 +114,7 @@ static const page_t PAGES[NPAGE] = {
     {"REVERB 2", {GL(rv_shift, "SHIFT", 24, K_NUM, CY, "24", "1"), NONE, NONE, NONE}},
     {"PHASER", {GL(ph_rate, "RATE", 127, K_NUM, CW, "FAST", "SLOW"), GL(ph_depth, "DEPTH", 127, K_NUM, CG, "10", "0"),
                 GL(ph_fb, "FEEDBK", 127, K_NUM, CR, "10", "0"), GL(ph_mix, "MIX", 127, K_NUM, CS, "10", "0")}},
-    {"MAIN",   {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
+    {"MAIN",   {ST(tune, "TUNE", 127, K_CENT, CW, "+", "-"), ST(trans, "TRANS", 48, K_SEMI, CW, "+24", "-24"),
                 ST(rolloff, "TONE", 127, K_NUM, CY, "WARM", "OPEN"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
     {"MIDI",   {ST(midi_chan, "CHAN", 16, K_MCHAN, CW, "16", "OMNI"), ST(expr, "EXPR", 127, K_EXPR, CW, "CC", "AT"),
                 ST(pc_on, "PROG", 1, K_ONOFF, CK, "", ""), ST(nlearn, "LEARNS", 16, K_NUM, CK, "", "")}},
@@ -366,7 +368,7 @@ static const sound_t SOUNDS[] = {
 };
 #define NSOUND (sizeof SOUNDS / sizeof SOUNDS[0])
 
-#define SET_MAGIC 0xD3u
+#define SET_MAGIC 0xD4u
 
 /* the user presets: 32 slots of 128 bytes in the bank sector, each a magic, the tones and the patch */
 #define NUSER 32u
@@ -564,6 +566,8 @@ static void fmt_value(const pdesc_t *d, uint32_t v, char *s)   /* up to 6 charac
     case K_MCHAN: if (!v) src = "OMNI"; break;
     case K_DIV: src = N_DIV[v & 7u]; break;
     case K_SUS: src = v ? "II" : "I"; break;
+    case K_CENT: n = ((int32_t)v - 64) * 100 / 64; break;   /* TUNE in cents */
+    case K_SEMI: n -= 24; break;                             /* TRANS in semitones */
     case K_LDIV: src = N_LDIV[v > 5u ? 5u : v]; break;
     case K_TEMPO: {                                    /* the tempo from the clock, as beats a minute */
         uint32_t bpm = beat_ms ? (60000u + beat_ms / 2u) / beat_ms : 0;
@@ -896,6 +900,13 @@ static void sustain_set(uint32_t on)
             if (sus_held[n >> 3] >> (n & 7u) & 1u) { sus_held[n >> 3] &= (uint8_t)~(1u << (n & 7u)); voice_off(n); }
 }
 static void changed(void) { dirty = 1; t_change = fm1_ms; }
+static uint32_t vel_map(uint32_t v)                    /* VELOC: the MIDI velocity through a curve, 64 linear, below softer (a light touch louder), above harder */
+{
+    int32_t c = (int32_t)set.vel_curve, x = (int32_t)(v > 127u ? 127u : v);
+    if (c < 64) x += (127 - x) * x * (64 - c) / (64 * 127);
+    else if (c > 64) x -= x * (127 - x) * (c - 64) / (63 * 127);
+    return (uint32_t)clamp(x, 1, 127);
+}
 
 static void say(const char *m)
 {
@@ -919,6 +930,7 @@ static void app_init(void)
         set.aat_off = 0;
         set.sus2 = 0;
         set.rolloff = 100;
+        set.tune = 64; set.trans = 24; set.vel_curve = 64;
         set.rib_range = 70; set.rib_return = 40; set.rib_hold = 0; set.rib_delay = 28;
         set.key_sense = 1; set.key_drive = 2; set.key_curve = 48; set.key_light = 99; set.key_at = 92; set.key_topvel = 100;
         patch = INIT_PATCH;
@@ -942,6 +954,7 @@ static void app_loop(void)
 {
     uint32_t live;
     tone_set = set.rolloff;
+    tune256 = ((int32_t)set.tune - 64) * 4 + ((int32_t)set.trans - 24) * 256;   /* MAIN: 1.56 cents a step, whole semitones */
     {                                                  /* the sensing set up when its six settings change, not every pass */
         const uint8_t *kc = &set.key_sense; uint32_t i, same = 1;
         for (i = 0; i < 6u; i++) if (kc[i] != keys_cfg_seen[i]) { keys_cfg_seen[i] = kc[i]; same = 0; }
@@ -1088,7 +1101,7 @@ static void app_loop(void)
                 continue;
             }
             p = param_ptr(d);
-            v = clamp((int32_t)*p + n * (d->max > 16u ? 2 : 1), 0, d->max);
+            v = clamp((int32_t)*p + n * (d->max >= 100u ? 2 : 1), 0, d->max);   /* (a 0..127 knob: two a detent) */
             if (p == &set.nlearn) { if (n < 0 && set.nlearn) { set.nlearn = 0; changed(); say("LEARNS CLEARED"); draw_param(k); } continue; }
             if (v != *p) { *p = (uint8_t)v; cc_latched[k] = 0; set.patch = patch; changed(); if (page == PG_HOME) draw_home(); else draw_param(k); tones_drawn = ~0u; if (page_has_drawing()) draw_shape(); }
         }
@@ -1100,7 +1113,7 @@ static void app_loop(void)
         if (st == 0xFAu) { lfo_reset++; clk_n = 0; clk_t0 = fm1_ms; continue; }   /* start: the sub oscillator from 0 */
         if (st >= 0xF0u) continue;
         if (set.midi_chan && chn != set.midi_chan) continue;
-        if (m == 0x90u && d2) note_on(d1, d2);
+        if (m == 0x90u && d2) note_on(d1, vel_map(d2));
         else if (m == 0x80u || m == 0x90u) note_off(d1);
         else if (m == 0xD0u) voices_pressure(-1, d1);                    /* channel pressure */
         else if (m == 0xA0u) voices_pressure((int32_t)d1, d2);           /* polyphonic pressure */
