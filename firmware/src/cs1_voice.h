@@ -267,7 +267,7 @@ static void chan_render(voice_t *v, uint32_t ch, int32_t *mix)
             if (sine_lv)
                 x -= mulq15(sine_i(ph), sine_lv);   /* the rising saw's fundamental is -sin: in phase with it */
             ph += inc;
-            mix[t * CTL + i] += mulq15(x, amp);
+            mix[t * CTL + i] += mulq15(clamp(x, -65535, 65535), amp);   /* (a resonant peak on a sine peak can pass 65535: the product would wrap) */
         }
     }
 done:

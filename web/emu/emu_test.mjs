@@ -66,8 +66,8 @@ a.render(300);
 const saves0 = a.ex.web_settings_saves();
 a.tap(BTN.OCT_UP);
 check("OCT+ lights its LED", (a.ex.web_leds_buttons() >> BTN.OCT_UP) & 1);
-a.render(2500);
-check("the settings reach the sector 2 s later", a.ex.web_settings_saves() === saves0 + 1);
+a.render(9000);                                   // 2 s after the change, once the reverb tail is under -36 dBFS
+check("the settings reach the sector once the tail is quiet", a.ex.web_settings_saves() === saves0 + 1);
 const b = await device(a.settings());
 b.render(100);
 check("a fresh instance with the saved sector starts an octave up", (b.ex.web_leds_buttons() >> BTN.OCT_UP) & 1);

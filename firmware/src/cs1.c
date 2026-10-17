@@ -377,7 +377,17 @@ static union { slot_t slot[NUSER]; uint8_t raw[NUSER * 128u]; } bank;   /* (the 
 static uint8_t bank_ok;
 static patch_t loaded;                                /* the panel as the sound or slot left it: the star, RECALL */
 static slot_t *slot_at(uint32_t i) { return (slot_t *)(bank.raw + (i % NUSER) * 128u); }
-static int slot_used(uint32_t i) { return slot_at(i)->magic == SLOT_MAGIC; }
+static int patch_valid(const patch_t *p)            /* every byte a knob could have made: the tables are indexed by them unchecked */
+{
+    const uint8_t *b = (const uint8_t *)p;
+    uint32_t i, ch;
+    for (i = 0; i < sizeof *p; i++)
+        if (b[i] > 127u) return 0;
+    for (ch = 0; ch < NCH; ch++)
+        if (p->ch[ch].feet > 5u || p->ch[ch].wave > 2u) return 0;
+    return p->lfo_wave <= 4u && p->gliss <= 1u && p->cho_mode <= 2u && p->dly_ping <= 1u && p->dly_sync <= 7u && p->lfo_sync <= 5u && p->rv_shift <= 24u;
+}
+static int slot_used(uint32_t i) { return slot_at(i)->magic == SLOT_MAGIC && patch_valid(&slot_at(i)->patch); }
 static uint8_t *param_ptr(const pdesc_t *d)
 {
     return d->global == 2 ? (uint8_t *)&set + d->off : d->global ? (uint8_t *)&patch + d->off : (uint8_t *)&patch.ch[set.chan] + d->off;
@@ -458,7 +468,7 @@ static void sound_load(uint32_t i)
 static void slot_load(uint32_t i)                     /* a user preset onto the panel */
 {
     const slot_t *sl = slot_at(i);
-    if (sl->magic != SLOT_MAGIC) return;
+    if (!slot_used(i)) return;
     patch = sl->patch;
     set.tone[0] = sl->tone[0] % NTONE;
     set.tone[1] = sl->tone[1] % NTONE;
@@ -505,7 +515,7 @@ static int tone_edited(uint32_t ch)                    /* the channel's panel di
     uint32_t i;
     for (i = 0; i < sizeof *t; i++)
         if (a[i] != b[i] && i != offsetof(chan_patch_t, feet) && i != offsetof(chan_patch_t, level)
-            && i != offsetof(chan_patch_t, at_brill) && i != offsetof(chan_patch_t, v_a))
+            && i != offsetof(chan_patch_t, at_brill) && i != offsetof(chan_patch_t, v_a) && i != offsetof(chan_patch_t, v_r))
             return 1;
     return 0;
 }
@@ -816,6 +826,7 @@ static uint32_t content_dirty;                   /* the page's content changed (
 static uint32_t strip_drawn = ~0u, strip_ms;
 static uint8_t held[27];                               /* the note each key plays (255: a tone button, not a note) */
 static uint32_t last_midi_ms;                    /* the last MIDI message that was not the clock: a flash save waits for quiet */
+static uint32_t loud_ms;                         /* the last block with output above -36 dBFS (a tail through the effects): a save waits for it too */
 static uint32_t midi_redraw, midi_stat_ms;
 static uint8_t cc_latched[4], cc_last[4], cc_page = 255;   /* CC 80..83 pickup: a knob takes hold of the page's parameter once it passes through its value */                     /* page knobs moved by MIDI this loop (bit k), bit 4 the drawing: redrawn once after the drain */
 static uint8_t key_at_sent[27], last_vel, last_key;    /* the pressure last sent per key; the last landing (the KEYS pages' readout) */
@@ -913,6 +924,7 @@ static void app_init(void)
         sound_load(0);
         set.patch = patch;
     }
+    if (!patch_valid(&set.patch)) { patch = INIT_PATCH; sound_load(0); set.patch = patch; }   /* (another build's layout: a fresh panel) */
     patch = set.patch;
     loaded = patch;                                    /* (after a power-off the panel as kept is the reference) */
     aat_on = !set.aat_off;
@@ -1246,7 +1258,8 @@ static void app_loop(void)
         status_drawn = k; tones_drawn = k; draw_status(oct(), nv);
     }
 
-    if (dirty && !sounding && fm1_ms - t_change > 2000u && fm1_ms - last_midi_ms > 1000u) {   /* 2 s after the change, when silent and MIDI is quiet (an erase stalls everything for up to 400 ms) */
+    if (sounding || out_peak > 512) loud_ms = fm1_ms;
+    if (dirty && !sounding && fm1_ms - t_change > 2000u && fm1_ms - last_midi_ms > 1000u && fm1_ms - loud_ms > 500u) {   /* 2 s after the change, when silent (the tails too) and MIDI is quiet (an erase stalls everything for up to 400 ms) */
         settings_save(&set, sizeof set);
         dirty = 0;
     }

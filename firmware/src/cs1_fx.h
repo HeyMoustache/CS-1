@@ -39,10 +39,10 @@ static void fx_delay(int32_t *st, uint32_t n)       /* st: L R L R ..., in place
         if (tape) {                                 /* read between frames at the wandering position */
             uint32_t fr = (uint32_t)(dly_m16 + 32 * 16) & 15u, a, b;
             dly_m16 += dly_m16_d; m16 = dly_m16 + 32 * 16;   /* kept positive */
-            back = (int32_t)time + (m16 >> 4) - 32;
+            back = clamp((int32_t)time + (m16 >> 4) - 32, 2, (int32_t)DLY_LEN - 2);   /* (the wander kept inside the line at the extremes) */
             a = dly_back((uint32_t)back); b = dly_back((uint32_t)back + 1u);
             tap = dly_line[a] + (((dly_line[b] - dly_line[a]) * (int32_t)fr) >> 4);
-            if (patch.dly_ping) { a = dly_back((uint32_t)half + (m16 >> 4) - 32); b = dly_back((uint32_t)half + (m16 >> 4) - 31); tap2 = dly_line[a] + (((dly_line[b] - dly_line[a]) * (int32_t)fr) >> 4); }
+            if (patch.dly_ping) { back = clamp((int32_t)half + (m16 >> 4) - 32, 2, (int32_t)DLY_LEN - 2); a = dly_back((uint32_t)back); b = dly_back((uint32_t)back + 1u); tap2 = dly_line[a] + (((dly_line[b] - dly_line[a]) * (int32_t)fr) >> 4); }
             else tap2 = tap;
         } else {
             tap = dly_line[dly_back(time)];
@@ -77,10 +77,10 @@ static void fx_phaser(int32_t *st, uint32_t n)
     }
     for (i = 0; i < n; i++) {
         for (c = 0; c < 2u; c++) {
-            int32_t in = st[2u * i + c], x = in + mulq15(ph_last[c], fb), a = ph_a[c];
-            for (k = 0; k < 6u; k++) {               /* y = -a x + x1 + a y1 */
-                int32_t y = -mulq15(x, a) + ph_x[c][k] + mulq15(ph_y[c][k], a);
-                ph_x[c][k] = x; ph_y[c][k] = clamp(y, -(1 << 20), 1 << 20); x = y;
+            int32_t in = st[2u * i + c], x = clamp(in + mulq15(ph_last[c], fb), -60000, 60000), a = ph_a[c];
+            for (k = 0; k < 6u; k++) {               /* y = -a x + x1 + a y1; the states held under 60000: a Q15 product of more wraps */
+                int32_t y = clamp(-mulq15(x, a) + ph_x[c][k] + mulq15(ph_y[c][k], a), -60000, 60000);
+                ph_x[c][k] = x; ph_y[c][k] = y; x = y;
             }
             ph_last[c] = x;
             ph_a[c] += ph_a_d[c];
