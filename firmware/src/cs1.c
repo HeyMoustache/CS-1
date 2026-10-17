@@ -21,8 +21,9 @@
  *   KNOB 1..4   the four parameters of the page; SELECT turns the pages
  *   PRESETS     a sound (both channels' tones and the globals: SOUNDS below), then the user presets U01..U32
  *   HOME + key  the tone buttons: the lower eleven keys are row I's tones, the upper eleven row II's (the key LEDs
- *               show the lit ones while HOME is held); ALGO steps along the selected channel's row as well
- *   EDIT        the next channel page (VCO, MIX, VCF, F.ENV, VCA, TOUCH, CHAN); HOME the first; ENV F.ENV / VCA;
+ *               show the lit ones while HOME is held); on HOME, ALGO steps along the selected channel's row
+ *   ALGO        on any other page: the button's group of pages, either way (EDIT's seven, FX's seven, ...)
+ *   EDIT        the next channel page (VCO, VCO 2, VCF, VCF EG, VCA EG, VCA, TOUCH); HOME the first; ENV F.ENV / VCA;
  *               LFO the sub oscillator / its pressure page / AUTO AT (a pressure curve every note plays by itself);
  *               FX the ring modulator / chorus / delay / reverb pages; ARP the PLAY page
  *               (portamento, glissando, channel II detune, initial pitch bend); GLO the MAIN page (tune, transpose, TONE, volume)
@@ -76,15 +77,15 @@ static const page_t PAGES[NPAGE] = {
                        GL(mix, "MIX", 127, K_NUM, CW, "II", "I"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
     {"VCO",    {CH(feet, "FEET", 5, K_FEET, CW, "2'", "16'"), CH(wave, "WAVE", 2, K_WAVE, CW, "", ""),
                 CH(pw, "PW", 127, K_NUM, CG, "90%", "50%"), CH(pwm, "PWM", 127, K_NUM, CG, "10", "0")}},
-    {"VCO 2",  {CH(pwm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"), CH(noise, "NOISE", 127, K_NUM, CW, "10", "0"),
-                CH(vcf_lv, "VCF", 127, K_NUM, CS, "10", "0"), CH(sine, "SINE", 127, K_NUM, CS, "10", "0")}},
+    {"VCO 2",  {CH(pwm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"), CH(noise, "NOISE", 127, K_NUM, CW, "10", "0"), NONE, NONE}},
     {"VCF",    {CH(hp_cut, "HPF", 127, K_NUM, CG, "HIGH", "LOW"), CH(hp_res, "RES.H", 127, K_NUM, CR, "HIGH", "LOW"),
                 CH(lp_cut, "LPF", 127, K_NUM, CG, "HIGH", "LOW"), CH(lp_res, "RES.L", 127, K_NUM, CR, "HIGH", "LOW")}},
     {"VCF EG", {CH(f_il, "IL", 127, K_BIP, CK, "+", "-"), CH(f_al, "AL", 127, K_BIP, CK, "+", "-"),
                 CH(f_a, "A", 127, K_NUM, CK, "LONG", "SHORT"), CH(f_d, "D", 127, K_NUM, CK, "LONG", "SHORT")}},
     {"VCA EG", {CH(v_a, "A", 127, K_NUM, CK, "LONG", "SHORT"), CH(v_d, "D", 127, K_NUM, CK, "LONG", "SHORT"),
                 CH(v_s, "S", 127, K_NUM, CK, "10", "0"), CH(v_r, "R", 127, K_NUM, CY, "LONG", "SHORT")}},
-    {"VCA",    {CH(f_r, "VCF R", 127, K_NUM, CY, "LONG", "SHORT"), CH(level, "LEVEL", 127, K_NUM, CS, "10", "0"), NONE, NONE}},
+    {"VCA",    {CH(sine, "SINE", 127, K_NUM, CS, "10", "0"), CH(vcf_lv, "VCF", 127, K_NUM, CS, "10", "0"),
+                CH(level, "LEVEL", 127, K_NUM, CS, "10", "0"), CH(f_r, "VCF R", 127, K_NUM, CY, "LONG", "SHORT")}},
     {"TOUCH",  {CH(it_brill, "I.BRIL", 127, K_NUM, CG, "10", "0"), CH(it_level, "I.LEV", 127, K_NUM, CS, "10", "0"),
                 CH(at_brill, "A.BRIL", 127, K_NUM, CG, "10", "0"), CH(at_level, "A.LEV", 127, K_NUM, CS, "10", "0")}},
     {"SUB OSC", {GL(lfo_wave, "FUNC", 5, K_LWAVE, CK, "", ""), GL(lfo_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
@@ -102,13 +103,13 @@ static const page_t PAGES[NPAGE] = {
                 ST(vel_curve, "VELOC", 127, K_NUM, CG, "HARD", "SOFT"), NONE}},
     {"RIBBON",  {ST(rib_hold, "HOLD", 1, K_ONOFF, CK, "", ""), ST(rib_range, "RANGE", 127, K_NUM, CW, "WIDE", "FINE"), ST(rib_return, "RETURN", 127, K_NUM, CK, "SLOW", "FAST"), ST(rib_delay, "DELAY", 127, K_NUM, CK, "LONG", "NONE")}},
     {"RING MOD", {GL(rm_mod, "MOD", 127, K_NUM, CS, "10", "0"), GL(rm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
-                  GL(rm_depth, "DEPTH", 127, K_NUM, CW, "10", "0"), GL(rm_a, "ATTACK", 127, K_NUM, CK, "LONG", "SHORT")}},
-    {"CHORUS", {GL(rm_d, "R.DECAY", 127, K_NUM, CK, "LONG", "SHORT"), GL(cho_mode, "MODE", 2, K_CHO, CK, "", ""),
-                GL(cho_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"), GL(cho_depth, "DEPTH", 127, K_NUM, CW, "10", "0")}},
+                  GL(rm_depth, "DEPTH", 127, K_NUM, CW, "10", "0"), GL(rm_d, "DECAY", 127, K_NUM, CK, "LONG", "SHORT")}},   /* (the attack stays at 10, as every sound has it) */
+    {"CHORUS", {GL(cho_mode, "MODE", 2, K_CHO, CK, "", ""), GL(cho_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
+                GL(cho_depth, "DEPTH", 127, K_NUM, CW, "10", "0"), NONE}},
     {"DELAY",  {GL(dly_time, "TIME", 127, K_NUM, CW, "LONG", "SHORT"), GL(dly_fb, "FEEDBK", 127, K_NUM, CW, "10", "0"),
                 GL(dly_mix, "MIX", 127, K_NUM, CS, "10", "0"), GL(dly_sync, "SYNC", 7, K_DIV, CK, "", "")}},
     {"DELAY 2", {GL(dly_ping, "PING", 1, K_ONOFF, CK, "", ""), GL(dly_damp, "DAMP", 127, K_NUM, CG, "10", "0"),
-                 GL(dly_sync, "SYNC", 7, K_DIV, CK, "", ""), GL(dly_tape, "TAPE", 127, K_NUM, CY, "10", "0")}},
+                 GL(dly_tape, "TAPE", 127, K_NUM, CY, "10", "0"), NONE}},
     {"REVERB", {GL(rv_mix, "MIX", 127, K_NUM, CS, "10", "0"), GL(rv_size, "SIZE", 127, K_NUM, CW, "LONG", "SHORT"),
                 GL(rv_damp, "DAMP", 127, K_NUM, CG, "10", "0"), GL(rv_shim, "SHIMMR", 127, K_NUM, CY, "10", "0")}},
     {"REVERB 2", {GL(rv_shift, "SHIFT", 24, K_NUM, CY, "24", "1"), NONE, NONE, NONE}},
@@ -1044,13 +1045,18 @@ static void app_loop(void)
         }
     }
     rib_tick_ms = fm1_ms;
-    if ((n = fm1_enc_take(ENC_ALGORITHM)) != 0) {     /* the next tone along the channel's row of buttons */
-        uint32_t i, pos = 0;
-        for (i = 0; i < 11u; i++)
-            if (TONE_ROW[set.chan][i] == set.tone[set.chan]) pos = i;
-        pos = (uint32_t)(((int32_t)pos + n + 44) % 11);
-        tone_load(set.chan, TONE_ROW[set.chan][pos]);
-        set.patch = patch; changed(); content_dirty = 1u;
+    if ((n = fm1_enc_take(ENC_ALGORITHM)) != 0) {     /* on HOME the next tone along the channel's row of buttons; elsewhere the group's pages, either way */
+        if (page == PG_HOME) {
+            uint32_t i, pos = 0;
+            for (i = 0; i < 11u; i++)
+                if (TONE_ROW[set.chan][i] == set.tone[set.chan]) pos = i;
+            pos = (uint32_t)(((int32_t)pos + n + 44) % 11);
+            tone_load(set.chan, TONE_ROW[set.chan][pos]);
+            set.patch = patch; changed(); content_dirty = 1u;
+        } else {
+            uint32_t first = PAGE_GROUP[page][0], cnt = PAGE_GROUP[page][1];
+            page = first + (uint32_t)(((int32_t)(page - first) + n + (int32_t)cnt * 4) % (int32_t)cnt);
+        }
     }
     if ((n = fm1_enc_take(ENC_PRESETS)) != 0) {       /* a sound (both channels and the globals), or a user preset */
         uint32_t total = NSOUND + NUSER;
