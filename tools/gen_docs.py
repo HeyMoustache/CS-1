@@ -26,7 +26,7 @@ for m in re.finditer(r'\{"([^"]+)",\s*\{(.*?)\}\},', block, re.S):
 CAP = {"CW": "w", "CG": "g", "CR": "r", "CK": "k", "CY": "y", "CS": "s"}
 GROUP = {"TONES": "HOME", "VCO": "EDIT", "VCO 2": "EDIT", "VCF": "EDIT", "VCF EG": "EDIT", "VCA EG": "EDIT", "VCA": "EDIT", "TOUCH": "EDIT",
          "SUB OSC": "LFO", "SUB OSC 2": "LFO", "TOUCH RESP": "LFO", "AUTO AT": "LFO", "PERFORM": "ARP", "KEYBOARD": "ARP", "MODES": "ARP", "RIBBON": "ARP",
-         "RING MOD": "FX", "DRIVE": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "REVERB 2": "FX", "PHASER": "FX", "MAIN": "GLO", "MIDI": "GLO", "KEYS": "GLO", "KEYS 2": "GLO"}
+         "RING MOD": "FX", "DRIVE": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "SHIMMER": "FX", "PHASER": "FX", "MAIN": "GLO", "MIDI": "GLO", "KEYS": "GLO", "KEYS 2": "GLO"}
 PAGE_NOTE = {
     "TONES": "The HOME page: the two rows of tone buttons, the sound's name, and the lower panel's performance levers.",
     "VCO": "The oscillator of the channel being edited (SEL picks I or II). The CS-80's VCO section.",
@@ -51,7 +51,7 @@ PAGE_NOTE = {
     "CHORUS": "The chorus / tremolo / flanger: the CS-80's slow phasing tremolo between left and right (stereo here).",
     "DELAY": "A stereo delay, with SYNC overriding TIME in note divisions of the MIDI clock.",
     "DELAY 2": "The delay's ping-pong, the damping in its feedback, and TAPE: the character of a tape echo.",
-    "REVERB 2": "The shimmer's interval.",
+    "SHIMMER": "The reverb's shimmer: its own output fed back an interval up, and that interval.",
     "PHASER": "A six-stage phaser, the right side a quarter turn behind the left. Not on the CS-80; of its era.",
     "REVERB": "A plate after Dattorro: diffused input, two cross-coupled tanks with slowly wandering allpasses, damping in the loop. With a shimmer: the output fed back an octave up.",
     "MAIN": "The instrument's own settings: master tune, transpose, TONE and the output level. The firmware's version sits in the header.",
@@ -95,11 +95,11 @@ DESC = {
     ("DELAY", "SYNC"): "FREE, or a note division of the MIDI clock that overrides TIME.",
     ("DELAY 2", "PING"): "The right side on a tap at half the time.", ("DELAY 2", "DAMP"): "A low-pass in the feedback: repeats get darker.",
     ("DELAY 2", "TAPE"): "A tape echo's character: the repeats wander a little (wow and flutter), darken each pass and saturate in the feedback. 0 is the clean delay.",
-    ("REVERB 2", "SHIFT"): "The interval the shimmer feeds back at, in semitones: 12 is the octave, 7 a fifth, 19 an octave and a fifth.",
+    ("SHIMMER", "SHIFT"): "The interval the shimmer feeds back at, in semitones: 12 is the octave, 7 a fifth, 19 an octave and a fifth.",
     ("PHASER", "RATE"): "The sweep's speed, 0.1 to 9 Hz.", ("PHASER", "DEPTH"): "How far the sweep travels, 100 Hz to 5 kHz at full.", ("PHASER", "FEEDBK"): "Feedback round the stages: sharper notches.", ("PHASER", "MIX"): "The phased signal added to the dry; 0 is off.",
     ("DELAY 2", "TEMPO"): "The tempo the clock gives, in brackets when no clock has arrived for two seconds (120 at power-on).",
     ("REVERB", "MIX"): "The reverb's level; 0 is off.", ("REVERB", "SIZE"): "The decay, half a second to about 25 s.",
-    ("REVERB", "DAMP"): "Darkens the tail.", ("REVERB", "SHIMMR"): "Feeds the tail back an octave up: it climbs in octaves. Its loop never runs away.",
+    ("REVERB", "DAMP"): "Darkens the tail.", ("SHIMMER", "SHIMMR"): "Feeds the tail back an octave up: it climbs in octaves. Its loop never runs away.",
     ("MAIN", "TUNE"): "Master tune, about a semitone either way in steps of 1.6 cents. 0 is A440.", ("MAIN", "TRANS"): "Transpose, up to two octaves either way in semitones.", ("MAIN", "TONE"): "A gentle 12 dB per octave roll-off above the filters, as the instrument's output stage has it: off at 0, 2.4 kHz at 100 (the CS-80 V's, measured), 1.6 kHz at full. It takes the glass off the sawtooth; BRILL on HOME still opens the filters under it.", ("MAIN", "VOLUME"): "As on HOME.",
     ("MIDI", "CHAN"): "OMNI, or a channel 1 to 16.", ("MIDI", "EXPR"): "AT only, or a CC number that also acts as pressure (CC 1 by default).",
     ("MIDI", "PROG"): "Program change on or off.", ("MIDI", "LEARNS"): "How many CCs are bound to parameters; turn it down to 0 to clear them.",
