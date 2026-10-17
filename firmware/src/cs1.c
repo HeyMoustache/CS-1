@@ -585,11 +585,16 @@ static void draw_header(uint32_t load)
     int32_t rl = PAGE_GROUP[page][1] > 1u ? 32 : 8;   /* the left rule starts after the "2/4" */
     cv_begin(240, 24, C_PANEL);
     cv_rect(rl, 12, x0 - 6 - rl, 1, C_RULE);
-    cv_rect(x0 + w + 6, 12, 240 - 14 - (x0 + w + 6), 1, C_RULE);
+    {                                              /* the right rule, ending before the version on MAIN */
+        int32_t rr = page == PG_MAIN ? 232 - text_w(&FONT_S, "V" APP_VER) : 240 - 14;
+        cv_rect(x0 + w + 6, 12, rr - (x0 + w + 6), 1, C_RULE);
+    }
     cv_text(x0, 4, &FONT_S, pg->title, C_SILK);
     if (!pg->p[0].global && page != PG_HOME) {        /* a channel page: I or II, as the lit tone button */
         cv_rect(214, 2, set.chan ? 24 : 16, 20, C_ACC);
         cv_text(218, 4, &FONT_S, set.chan ? "II" : "I", C_PANEL);
+    } else if (page == PG_MAIN) {                      /* the firmware's version (the VERSION file) */
+        cv_text(238 - text_w(&FONT_S, "V" APP_VER), 4, &FONT_S, "V" APP_VER, C_LEG);
     } else if (page == PG_HOME) {                      /* the auto after touch's tablet */
         cv_rect(198, 2, 40, 20, aat_on ? C_ACC : C_SLOT);
         cv_text(202, 4, &FONT_S, "AUTO", aat_on ? C_PANEL : C_LEG);

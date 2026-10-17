@@ -10,7 +10,7 @@ if ! command -v emcc >/dev/null 2>&1 && [ -f "$HOME/.emsdk/emsdk_env.sh" ]; then
     EMSDK_QUIET=1 . "$HOME/.emsdk/emsdk_env.sh"
 fi
 command -v emcc >/dev/null 2>&1 || { echo "emu: no emcc (Emscripten): tools/get_emsdk.sh"; exit 1; }
-VERSION="${APP_VER:-dev}"
+VERSION="${APP_VER:-$(cat VERSION 2>/dev/null || echo dev)}"
 mkdir -p build/emu
 # shellcheck disable=SC2086
 emcc ${EMU_OPT:--O2} -ffp-contract=off -std=gnu99 -Wall -Wno-unused-function ${EMU_CFLAGS:-} \

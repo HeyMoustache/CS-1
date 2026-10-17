@@ -48,7 +48,7 @@ SDK_SHA256 = {
 }
 
 PRODUCT = "FM-1_950"                # CS-1: 95N (OUR_LOADER in the installer wants FM-1_9NN; Dinghy is 99N, FM-106 906)
-VERSION = None                      # APP_VER for release builds
+VERSION = None                      # APP_VER: the VERSION file, or --release
 
 
 def toolchain():
@@ -292,6 +292,7 @@ def main():
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     name = "cs1.fwsc"
+    VERSION = (SRC / "VERSION").read_text().strip() if (SRC / "VERSION").exists() else None
     if a.release:                   # one digit each: the identity has room for two (X.Y; a .Z only in the text)
         m = re.fullmatch(r"(\d)\.(\d)(\.\d)?(-[A-Za-z0-9]+)?", a.release)
         if not m:

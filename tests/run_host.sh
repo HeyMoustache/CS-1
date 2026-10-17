@@ -6,7 +6,7 @@ set -e
 cd "$(dirname "$0")/.."
 mkdir -p build/host
 CC="${CC:-cc}"
-$CC -O2 -Wall -Wno-unused-function -DDINGHY_HOST -DAPP_VER="\"${APP_VER:-dev}\"" -Ifirmware/src -Ifirmware/gen -o build/host/cs1 firmware/src/cs1.c
+$CC -O2 -Wall -Wno-unused-function -DDINGHY_HOST -DAPP_VER="\"${APP_VER:-$(cat VERSION 2>/dev/null || echo dev)}\"" -Ifirmware/src -Ifirmware/gen -o build/host/cs1 firmware/src/cs1.c
 $CC -O2 -Wall -o build/host/audio_worker_test tests/audio_worker_test.c
 build/host/audio_worker_test
 $CC -O2 -Wall -pthread -o build/host/audio_worker_thread_test tests/audio_worker_thread_test.c

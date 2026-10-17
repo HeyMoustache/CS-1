@@ -53,7 +53,7 @@ PAGE_NOTE = {
     "REVERB 2": "The shimmer's interval.",
     "PHASER": "A six-stage phaser, the right side a quarter turn behind the left. Not on the CS-80; of its era.",
     "REVERB": "A plate after Dattorro: diffused input, two cross-coupled tanks with slowly wandering allpasses, damping in the loop. With a shimmer: the output fed back an octave up.",
-    "MAIN": "The lower panel's levers: brilliance and resonance offsets for every filter, TONE, the output level. TONE is an instrument setting rather than part of a sound.",
+    "MAIN": "The lower panel's levers: brilliance and resonance offsets for every filter, TONE, the output level. TONE is an instrument setting rather than part of a sound. The firmware's version sits in the header.",
     "MIDI": "The channel listened to, which CC acts as pressure, program change on or off, and the learned CC bindings (turn down to clear).",
 }
 DESC = {
