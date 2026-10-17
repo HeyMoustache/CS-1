@@ -152,7 +152,7 @@ static int bank_load(void *p, uint32_t n) { if (n > BANK_LEN) return -1; memcpy(
 static int bank_save(const void *p, uint32_t n) { if (n > BANK_LEN) return -1; memcpy(fake_bank, p, n); fake_bank_saves++; return 0; }
 
 /* ---- meters for the host tests: the reverb lines' knee count, each stage's peak in the effects chain */
-static uint32_t rv_hot;
+static uint32_t rv_hot, dly_hot;
 static int32_t dbg_peak[4];                     /* the voices' sum, after the chorus, the delay, the reverb */
 static inline void dbg_meter(uint32_t k, const int32_t *p, uint32_t n)
 {

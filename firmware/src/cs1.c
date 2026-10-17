@@ -160,8 +160,10 @@ static void sync_update(void)                         /* the main loop: what the
     uint32_t d = patch.dly_sync & 7u, l = patch.lfo_sync > 5u ? 5u : patch.lfo_sync;
     uint32_t beat_frames = beat_ms * 441u / 10u;
     if (d) {
-        uint32_t t = beat_frames * DIV_NUM[d] / DIV_DEN[d];
-        sync_dly = t < 64u ? 64u : t > DLY_LEN - 1u ? DLY_LEN - 1u : t;
+        uint32_t t = beat_frames * DIV_NUM[d] / DIV_DEN[d], cur = sync_dly, diff;
+        t = t < 64u ? 64u : t > DLY_LEN - 1u ? DLY_LEN - 1u : t;
+        diff = t > cur ? t - cur : cur - t;
+        if (diff > cur >> 6) sync_dly = t;             /* a step only past 1.5 %: the beat's jitter no longer moves the read head (a tick each time) */
     }
     if (l) {
         uint32_t period = beat_frames * LDIV_Q[l];

@@ -410,7 +410,7 @@ static void chorus(const int32_t *mix, int32_t *out, uint32_t n)
     }
     base = 14 << 8;                                      /* 14 ms, in 1/256 frames of 44.1 kHz... as frames << 8 */
     base = (14 * 441 / 10) << 8;
-    swing = mode == CHO_CHORUS ? mulq15(depth, (8 * 441 / 10) << 8) : mulq15(depth >> 2, (8 * 441 / 10) << 8);
+    swing = mode == CHO_CHORUS ? (depth * 2816) >> 10 : ((depth >> 2) * 2816) >> 10;   /* up to 8 ms, frames << 8 (the Q15 product of 90112 wrapped above DEPTH 93) */
     trem = mode == CHO_TREMOLO ? depth >> 1 : depth >> 4;
     for (i = 0; i < n; i++) {
         int32_t l, r, lf, d, dl, dr;

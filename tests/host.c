@@ -97,8 +97,8 @@ static void write_wav(void)
     fwrite(wav, 4, wav_n, f);
     fclose(f);
     printf("sound  -> %s (%u frames)\n", name, wav_n);
-    printf("meters: voices %d, after chorus %d, after delay %d, after reverb %d (of 32767); reverb tanks near the 16-bit edge: %u samples\n",
-           dbg_peak[0], dbg_peak[1], dbg_peak[2], dbg_peak[3], rv_hot);
+    printf("meters: voices %d, after chorus %d, after delay %d, after reverb %d (of 32767); reverb tanks near the 16-bit edge: %u samples; delay writes clamped: %u\n",
+           dbg_peak[0], dbg_peak[1], dbg_peak[2], dbg_peak[3], rv_hot, dly_hot);
 }
 
 static void platform_poll(void)                 /* one call = one millisecond */
