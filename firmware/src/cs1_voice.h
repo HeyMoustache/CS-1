@@ -316,13 +316,14 @@ static void auto_at_block(voice_t *w)
     w->at_eff = (uint16_t)(at > (int32_t)w->at * 258 ? at : (int32_t)w->at * 258);
 }
 
-/* the voices lo .. hi - 1 into mix (one core's share) */
-static void voices_render(uint32_t lo, uint32_t hi, int32_t *mix)
+/* the voices first, first + step, ... into mix (one core's share: the even ones and the odd ones, so a chord of any size
+ * splits evenly between the cores whichever voices it took) */
+static void voices_render(uint32_t first, uint32_t step, int32_t *mix)
 {
     uint32_t v, ch, i;
     for (i = 0; i < HALF_FRAMES; i++)
         mix[i] = 0;
-    for (v = lo; v < hi; v++) {
+    for (v = first; v < NV; v += step) {
         voice_t *w = &voices[v];
         uint32_t trig = w->trig, any = 0;
         int32_t target = (int32_t)w->note * 256 + tune256 + w->uni256 + bend256 + rib256 + (((w->drift >> 8) * (int32_t)patch.vintage) >> 7);
@@ -436,11 +437,11 @@ static void chorus(const int32_t *mix, int32_t *out, uint32_t n)
 #include "cs1_fx.h"
 static int32_t g_st[2u * HALF_FRAMES];   /* the stereo sum through the effects */
 
-/* ---- the block: CPU0 prepares, CPU1 (when there) renders the upper half, CPU0 the lower, then the sum */
+/* ---- the block: CPU0 prepares, CPU1 (when there) renders the odd voices, CPU0 the even, then the sum */
 /* the reverb runs on the worker one block behind: its input is the last block's sum (rv_src), its output waits in
  * rv_wet for this block. 5.8 ms more pre-delay, and the plate's cost leaves CPU0. Without a worker it runs inline. */
 static int32_t rv_src[2u * HALF_FRAMES], rv_wet[2u * HALF_FRAMES];
-static void worker_render(void *ctx) { (void)ctx; voices_render(NV / 2u, NV, g_mix[1]); fx_reverb(rv_src, rv_wet, HALF_FRAMES); }
+static void worker_render(void *ctx) { (void)ctx; voices_render(1, 2, g_mix[1]); fx_reverb(rv_src, rv_wet, HALF_FRAMES); }
 static uint32_t audio_cycles;             /* ticks the last block took (the UI's load meter) */
 static volatile int32_t out_peak;         /* the last block's output peak (after the master knee) */
 
@@ -452,7 +453,7 @@ static void voices_block(int32_t *out, uint32_t n)
     (void)n;
     block_prepare();
     submitted = audio_worker_submit(worker_render, 0);
-    voices_render(0, submitted ? NV / 2u : NV, g_mix[0]);
+    voices_render(0, submitted ? 2u : 1u, g_mix[0]);
     if (submitted) {
         audio_worker_join();
         for (i = 0; i < HALF_FRAMES; i++)
