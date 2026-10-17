@@ -422,10 +422,10 @@ static void chorus(const int32_t *mix, int32_t *out, uint32_t n)
         cho_line[cho_w % CHO_LEN] = (int16_t)clamp(mix[i] + (mode == CHO_FLANGE ? mulq15(cho_fb, 20000) : 0), -32767, 32767);
         if ((i & 7u) == 0u) cho_ph += LFO_INC[spd] * 8u / CTL;  /* the LFO, advanced every 8 frames */
         lf = sine_i(cho_ph);
-        d = base + mulq15(swing, lf);                    /* the left side's delay, frames << 8 */
+        d = base + (((swing >> 8) * lf) >> 7);           /* the left side's delay, frames << 8 (swing can pass 65535: its Q15 product would wrap) */
         ip = (uint32_t)(d >> 8); fr = (uint32_t)d & 255u;
         dl = cho_line[(cho_w - ip) % CHO_LEN]; dl += ((cho_line[(cho_w - ip - 1u) % CHO_LEN] - dl) * (int32_t)fr) >> 8;
-        d = base - mulq15(swing, lf);                    /* the right side's, the other way */
+        d = base - (((swing >> 8) * lf) >> 7);           /* the right side's, the other way */
         ip = (uint32_t)(d >> 8); fr = (uint32_t)d & 255u;
         dr = cho_line[(cho_w - ip) % CHO_LEN]; dr += ((cho_line[(cho_w - ip - 1u) % CHO_LEN] - dr) * (int32_t)fr) >> 8;
         cho_fb = dl;
