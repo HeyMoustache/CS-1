@@ -136,7 +136,7 @@ def sound(p, name, t1, t2):
                     s["rv_shim"] = max(1, c127(127 * g(pre + "OctaverDelay_Feedback", 0.25) * 2))
             elif ty in ("Chorus", "Chorus JUN-6", "Flanger", "BL-20 Flanger"):
                 if not s["cho_mode"]:
-                    s["cho_mode"] = 1
+                    s["cho_mode"] = 3 if "Flanger" in ty else 1
                     s["cho_spd"] = max(1, c127(127 * (g(pre + "Juno6Chorus_RateHz", 0.25) if ty == "Chorus JUN-6" else g(pre + "Chorus_Freq", 0.25))))
                     s["cho_depth"] = max(1, c127(127 * min(1.0, 0.3 + wet)))
             elif ty == "Phaser":

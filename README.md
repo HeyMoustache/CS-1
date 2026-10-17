@@ -10,7 +10,7 @@ and pressure to brilliance and level); a sub oscillator to pitch, filter and lev
 chorus / tremolo (stereo here); portamento and glissando, channel II detune, the initial pitch bend, keyboard
 control, sustain modes I and II, brilliance and resonance levers, and the SELECT encoder as the ribbon. For a
 sequencer with no hands: an auto after touch curve each note plays by itself, MIDI learn, a CC map for the Circuit
-Tracks' macros, and clock sync. Effects beyond the instrument: a stereo delay with a tape character, a phaser,
+Tracks' macros, and clock sync. Effects beyond the instrument: drive and two shelves, a flanger, a stereo delay with a tape character, a phaser,
 and a Dattorro plate reverb with a shimmer at any interval. The 22 preset tones come from the owner's manual's
 charts (`tools/gen_presets.py` says how they were read and mapped), and the voice was calibrated against a CS-80
 emulation, one dry note at a time (`tools/compare_wav.py`). 52 sounds, 32 user presets, a documentation site with

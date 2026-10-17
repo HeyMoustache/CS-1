@@ -25,7 +25,7 @@
  *   ALGO        on any other page: the button's group of pages, either way (EDIT's seven, FX's seven, ...)
  *   EDIT        the next channel page (VCO, VCO 2, VCF, VCF EG, VCA EG, VCA, TOUCH); HOME the first; ENV F.ENV / VCA;
  *               LFO the sub oscillator / its pressure page / AUTO AT (a pressure curve every note plays by itself);
- *               FX the ring modulator / chorus / delay / reverb pages; ARP the PLAY page
+ *               FX the ring modulator / drive and EQ / chorus / delay / reverb / phaser pages; ARP the PLAY page
  *               (portamento, glissando, channel II detune, initial pitch bend); GLO the MAIN page (tune, transpose, TONE, volume)
  *   SEL         channel I / II (its LED lit for II)
  *   MASTER      the volume (platform.c)
@@ -71,7 +71,7 @@ typedef struct { const char *name; uint8_t off, max, kind, global, color; const 
 #define NONE {0, 0, 0, 0, 0, 0, 0, 0}
 typedef struct { const char *title; pdesc_t p[4]; } page_t;
 enum { PG_HOME = 0, PG_VCO, PG_VCO2, PG_VCF, PG_FENV, PG_VENV, PG_VCA2, PG_TOUCH,
-       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RIB, PG_RING, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_REVERB2, PG_PHASER, PG_MAIN, PG_MIDI, PG_KEYS, PG_KEYS2, NPAGE };
+       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RIB, PG_RING, PG_DRIVE, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_REVERB2, PG_PHASER, PG_MAIN, PG_MIDI, PG_KEYS, PG_KEYS2, NPAGE };
 static const page_t PAGES[NPAGE] = {
     {"TONES", {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
                        GL(mix, "MIX", 127, K_NUM, CW, "II", "I"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
@@ -104,7 +104,9 @@ static const page_t PAGES[NPAGE] = {
     {"RIBBON",  {ST(rib_hold, "HOLD", 1, K_ONOFF, CK, "", ""), ST(rib_range, "RANGE", 127, K_NUM, CW, "WIDE", "FINE"), ST(rib_return, "RETURN", 127, K_NUM, CK, "SLOW", "FAST"), ST(rib_delay, "DELAY", 127, K_NUM, CK, "LONG", "NONE")}},
     {"RING MOD", {GL(rm_mod, "MOD", 127, K_NUM, CS, "10", "0"), GL(rm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
                   GL(rm_depth, "DEPTH", 127, K_NUM, CW, "10", "0"), GL(rm_d, "DECAY", 127, K_NUM, CK, "LONG", "SHORT")}},   /* (the attack stays at 10, as every sound has it) */
-    {"CHORUS", {GL(cho_mode, "MODE", 2, K_CHO, CK, "", ""), GL(cho_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
+    {"DRIVE",  {GL(drive, "DRIVE", 127, K_NUM, CR, "10", "0"), GL(drive_lv, "LEVEL", 127, K_NUM, CK, "+12", "-12"),
+                GL(eq_lo, "LOW", 127, K_BIP, CG, "+", "-"), GL(eq_hi, "HIGH", 127, K_BIP, CG, "+", "-")}},
+    {"CHORUS", {GL(cho_mode, "MODE", 3, K_CHO, CK, "", ""), GL(cho_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
                 GL(cho_depth, "DEPTH", 127, K_NUM, CW, "10", "0"), NONE}},
     {"DELAY",  {GL(dly_time, "TIME", 127, K_NUM, CW, "LONG", "SHORT"), GL(dly_fb, "FEEDBK", 127, K_NUM, CW, "10", "0"),
                 GL(dly_mix, "MIX", 127, K_NUM, CS, "10", "0"), GL(dly_sync, "SYNC", 7, K_DIV, CK, "", "")}},
@@ -126,13 +128,13 @@ static const page_t PAGES[NPAGE] = {
 /* the pages a button cycles through, for the "2/4" in the header: {first, count} by page */
 static const uint8_t PAGE_GROUP[NPAGE][2] = {
     {PG_HOME, 1}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7},
-    {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7}, {PG_RING, 7},
+    {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8},
     {PG_MAIN, 4}, {PG_MAIN, 4}, {PG_MAIN, 4}, {PG_MAIN, 4}};
 static const char *const N_FEET[6] = {"16'", "8'", "5.3'", "4'", "2.7'", "2'"};
 static const char *const N_WAVE[3] = {"SAW", "PULSE", "BOTH"};
 static const char *const N_LWAVE[6] = {"SINE", "TRI", "SAW", "SAW DN", "SQR", "NOISE"};
 static const char *const N_ONOFF[2] = {"OFF", "ON"};
-static const char *const N_CHO[3] = {"OFF", "CHORUS", "TREM"};
+static const char *const N_CHO[4] = {"OFF", "CHORUS", "TREM", "FLANGE"};
 static const char *const N_DIV[8] = {"FREE", "1/16", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2"};   /* the delay's divisions */
 static const uint8_t DIV_NUM[8] = {0, 1, 1, 1, 3, 1, 3, 2}, DIV_DEN[8] = {1, 4, 3, 2, 4, 1, 2, 1};   /* of a quarter note */
 static const char *const N_LDIV[6] = {"FREE", "1/4", "1/2", "1 BAR", "2 BAR", "4 BAR"};               /* the sub oscillator's */
@@ -178,7 +180,7 @@ static const patch_t INIT_PATCH = {                   /* the globals; sound_load
     60, LW_SINE, 0, 0, 0, 64, 64, 100,
     64, 0, 0, 0,  0, 0, 0,  0, 64, 0, 10, 60,  CHO_OFF, 30, 60,  40, 60, 0, 40,  70, 50, 0, 1, 40,  0, 80, 50, 0,
     .rv_shift = 12, .mix = 64, .vintage = 30, .kb_bl = 64, .kb_bh = 64, .kb_ll = 64, .kb_lh = 64,   /* (designated from here: a field added above shifted these once) */
-    .ph_rate = 40, .ph_depth = 64, .ph_fb = 40,
+    .ph_rate = 40, .ph_depth = 64, .ph_fb = 40, .eq_lo = 64, .eq_hi = 64, .drive_lv = 64,
 };
 
 /* sounds: a tone on each channel and the globals, the way the CS-80's two rows get combined */
@@ -371,12 +373,12 @@ static const sound_t SOUNDS[] = {
 };
 #define NSOUND (sizeof SOUNDS / sizeof SOUNDS[0])
 
-#define SET_MAGIC 0xD4u
+#define SET_MAGIC 0xD5u
 
 /* the user presets: 32 slots of 128 bytes in the bank sector, each a magic, the tones and the patch */
 #define NUSER 32u
 #define SLOT_MAGIC 0xA7u
-typedef struct { uint8_t magic, tone[2], pad; patch_t patch; } slot_t;
+typedef struct { uint8_t magic, tone[2], layout; patch_t patch; } slot_t;   /* layout: 0 = a slot from before DRIVE / EQ (their bytes read 0) */
 _Static_assert(sizeof(slot_t) <= 128, "a slot fits 128 bytes");
 static union { slot_t slot[NUSER]; uint8_t raw[NUSER * 128u]; } bank;   /* (the union pads each slot to 128) */
 static uint8_t bank_ok;
@@ -390,7 +392,7 @@ static int patch_valid(const patch_t *p)            /* every byte a knob could h
         if (b[i] > 127u) return 0;
     for (ch = 0; ch < NCH; ch++)
         if (p->ch[ch].feet > 5u || p->ch[ch].wave > 2u) return 0;
-    return p->lfo_wave <= 5u && p->gliss <= 1u && p->cho_mode <= 2u && p->dly_ping <= 1u && p->dly_sync <= 7u && p->lfo_sync <= 5u && p->rv_shift <= 24u;
+    return p->lfo_wave <= 5u && p->gliss <= 1u && p->cho_mode <= 3u && p->dly_ping <= 1u && p->dly_sync <= 7u && p->lfo_sync <= 5u && p->rv_shift <= 24u;
 }
 static int slot_used(uint32_t i) { return slot_at(i)->magic == SLOT_MAGIC && patch_valid(&slot_at(i)->patch); }
 static uint8_t *param_ptr(const pdesc_t *d)
@@ -456,6 +458,7 @@ static void sound_load(uint32_t i)
     patch.dly_tape = sd->dly_tape;
     patch.ph_rate = DEF(sd->ph_rate, 40); patch.ph_depth = DEF(sd->ph_depth, 64); patch.ph_fb = DEF(sd->ph_fb, 40); patch.ph_mix = sd->ph_mix;
     patch.lfo_sync = 0;
+    patch.drive = 0; patch.drive_lv = 64; patch.eq_lo = patch.eq_hi = 64;
     patch.vintage = DEF(sd->vintage, 30);
     patch.kb_bl = patch.kb_bh = patch.kb_ll = patch.kb_lh = 64;
     for (ch = 0; ch < NCH; ch++) {
@@ -475,6 +478,7 @@ static void slot_load(uint32_t i)                     /* a user preset onto the 
     const slot_t *sl = slot_at(i);
     if (!slot_used(i)) return;
     patch = sl->patch;
+    if (!sl->layout) { patch.drive = 0; patch.drive_lv = 64; patch.eq_lo = patch.eq_hi = 64; }   /* (an older slot: the fields it did not have, at rest) */
     set.tone[0] = sl->tone[0] % NTONE;
     set.tone[1] = sl->tone[1] % NTONE;
     set.sound = (uint8_t)(NSOUND + i % NUSER);
@@ -485,7 +489,7 @@ static void slot_store(uint32_t i)                    /* the panel into a user p
     sl->magic = SLOT_MAGIC;
     sl->tone[0] = set.tone[0];
     sl->tone[1] = set.tone[1];
-    sl->pad = 0;
+    sl->layout = 1;
     sl->patch = patch;
     bank_save(bank.raw, sizeof bank.raw);
     set.sound = (uint8_t)(NSOUND + i % NUSER);
@@ -564,7 +568,7 @@ static void fmt_value(const pdesc_t *d, uint32_t v, char *s)   /* up to 6 charac
     case K_WAVE: src = N_WAVE[v > 2u ? 2u : v]; break;
     case K_LWAVE: src = N_LWAVE[v > 5u ? 5u : v]; break;
     case K_ONOFF: src = N_ONOFF[v & 1u]; break;
-    case K_CHO: src = N_CHO[v > 2u ? 2u : v]; break;
+    case K_CHO: src = N_CHO[v > 3u ? 3u : v]; break;
     case K_BIP: n -= 64; break;
     case K_MCHAN: if (!v) src = "OMNI"; break;
     case K_DIV: src = N_DIV[v & 7u]; break;
@@ -1023,7 +1027,7 @@ static void app_loop(void)
     if (b & (1u << BTN_EDIT)) page = page >= PG_VCO && page < PG_TOUCH ? page + 1u : PG_VCO;
     if (b & (1u << BTN_ENV)) page = page == PG_FENV ? PG_VENV : PG_FENV;
     if (b & (1u << BTN_LFO)) page = page >= PG_SUB && page < PG_AUTO ? page + 1u : PG_SUB;
-    if (b & (1u << BTN_FX)) page = page >= PG_RING && page < PG_PHASER ? page + 1u : PG_RING;
+    if (b & (1u << BTN_FX)) page = page >= PG_RING && page < PG_PHASER ? page + 1u : PG_RING;   /* (PHASER is the group's last) */
     if (b & (1u << BTN_ARP)) page = page >= PG_PLAY && page < PG_RIB ? page + 1u : PG_PLAY;
     if (b & (1u << BTN_GLO)) page = page >= PG_MAIN && page < PG_KEYS2 ? page + 1u : PG_MAIN;
     if (b & (1u << BTN_SEL)) { set.chan ^= 1u; changed(); content_dirty = 1u; }

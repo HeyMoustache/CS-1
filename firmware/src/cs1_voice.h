@@ -50,9 +50,10 @@ typedef struct {
     uint8_t dly_tape;                                 /* TAPE: wow and flutter, saturation and darkening in the delay's loop */
     uint8_t ph_rate, ph_depth, ph_fb, ph_mix;         /* the phaser */
     uint8_t unison;                                   /* UNISON: two voices a note, this far apart (up to a quarter tone); 0 off */
+    uint8_t drive, eq_lo, eq_hi, drive_lv;            /* DRIVE: saturation on the sum before the chorus and its LEVEL (64 = as it was); the output's low and high shelves (64 = flat) */
 } patch_t;
-_Static_assert(sizeof(patch_t) <= 104, "the patch fits the settings and a bank slot");
-enum { CHO_OFF = 0, CHO_CHORUS, CHO_TREMOLO };
+_Static_assert(sizeof(patch_t) <= 124, "the patch fits a 128-byte bank slot with its header");
+enum { CHO_OFF = 0, CHO_CHORUS, CHO_TREMOLO, CHO_FLANGE };
 
 typedef struct {
     uint32_t ph;                  /* the VCO */
@@ -399,6 +400,7 @@ static void ring_mod(int32_t *mix, uint32_t n)
 #define CHO_LEN 2048u                    /* 46 ms of delay line */
 static int16_t cho_line[CHO_LEN] FM1_POOL;
 static uint32_t cho_w, cho_ph;
+static int32_t cho_fb;                   /* the flanger's feedback: the left tap last frame */
 static void chorus(const int32_t *mix, int32_t *out, uint32_t n)
 {
     uint32_t mode = patch.cho_mode, i;
@@ -408,14 +410,16 @@ static void chorus(const int32_t *mix, int32_t *out, uint32_t n)
         for (i = 0; i < n; i++) { out[2u * i] += mix[i]; out[2u * i + 1u] += mix[i]; }
         return;
     }
-    base = 14 << 8;                                      /* 14 ms, in 1/256 frames of 44.1 kHz... as frames << 8 */
-    base = (14 * 441 / 10) << 8;
+    base = (14 * 441 / 10) << 8;                         /* 14 ms, as frames << 8 */
     swing = mode == CHO_CHORUS ? (depth * 2816) >> 10 : ((depth >> 2) * 2816) >> 10;   /* up to 8 ms, frames << 8 (the Q15 product of 90112 wrapped above DEPTH 93) */
     trem = mode == CHO_TREMOLO ? depth >> 1 : depth >> 4;
+    if (mode == CHO_FLANGE) {                            /* FLANGE: 1.5 ms swept 1.2 ms, the left tap fed back into the line */
+        base = 66 << 8; swing = (depth * 13568) >> 15; trem = 0; spd = (spd * 3u) >> 2;
+    }
     for (i = 0; i < n; i++) {
         int32_t l, r, lf, d, dl, dr;
         uint32_t ip, fr;
-        cho_line[cho_w % CHO_LEN] = (int16_t)clamp(mix[i], -32767, 32767);
+        cho_line[cho_w % CHO_LEN] = (int16_t)clamp(mix[i] + (mode == CHO_FLANGE ? mulq15(cho_fb, 20000) : 0), -32767, 32767);
         if ((i & 7u) == 0u) cho_ph += LFO_INC[spd] * 8u / CTL;  /* the LFO, advanced every 8 frames */
         lf = sine_i(cho_ph);
         d = base + mulq15(swing, lf);                    /* the left side's delay, frames << 8 */
@@ -424,6 +428,7 @@ static void chorus(const int32_t *mix, int32_t *out, uint32_t n)
         d = base - mulq15(swing, lf);                    /* the right side's, the other way */
         ip = (uint32_t)(d >> 8); fr = (uint32_t)d & 255u;
         dr = cho_line[(cho_w - ip) % CHO_LEN]; dr += ((cho_line[(cho_w - ip - 1u) % CHO_LEN] - dr) * (int32_t)fr) >> 8;
+        cho_fb = dl;
         cho_w++;
         l = (mix[i] + dl) >> 1;
         r = (mix[i] + dr) >> 1;
@@ -432,6 +437,36 @@ static void chorus(const int32_t *mix, int32_t *out, uint32_t n)
         out[2u * i] += l;
         out[2u * i + 1u] += r;
     }
+}
+
+/* ---- DRIVE: the sum pushed into the knee, up to x9, then brought back; LOW and HIGH: first-order shelves on the output,
+ * +-12 dB below 250 Hz and above 2 kHz */
+static void fx_drive(int32_t *m, uint32_t n)
+{
+    uint32_t i;
+    int32_t d = patch.drive, g = 256 + d * 16, lv = (int32_t)patch.drive_lv * patch.drive_lv;   /* the gain in Q8 (x1 .. x9); LEVEL squared: 4096 = as it was, +-12 dB */
+    int32_t comp = 32767 * 64 / (64 + d);          /* ~1 / sqrt(gain): a quiet note keeps its level, a loud one is held */
+    if (!d && lv == 4096) return;
+    for (i = 0; i < n; i++) {
+        int32_t y = d ? mulq15(soft_knee((m[i] * g) >> 8, 14000), comp) : m[i];
+        m[i] = soft_knee((y * lv) >> 12, 20000);
+    }
+}
+static int32_t eq_lo[2], eq_hi[2];
+static void fx_eq(int32_t *st, uint32_t n)
+{
+    uint32_t i, c;
+    int32_t lo = (int32_t)patch.eq_lo - 64, hi = (int32_t)patch.eq_hi - 64, klo, khi;
+    if (!lo && !hi) return;
+    klo = lo > 0 ? lo * 390 : lo * 96;                /* Q13: +3.0 (x4, +12 dB) .. -0.75 (x0.25, -12 dB) */
+    khi = hi > 0 ? hi * 390 : hi * 96;
+    for (i = 0; i < n; i++)
+        for (c = 0; c < 2u; c++) {
+            int32_t x = st[2u * i + c];
+            eq_lo[c] += mulq15r(x - eq_lo[c], 1147);     /* one pole at 250 Hz */
+            eq_hi[c] += mulq15r(x - eq_hi[c], 8126);     /* one pole at 2 kHz: the shelf is what lies above it */
+            st[2u * i + c] = x + ((eq_lo[c] * klo) >> 13) + (((x - eq_hi[c]) * khi) >> 13);
+        }
 }
 
 #include "cs1_fx.h"
@@ -475,6 +510,7 @@ static void voices_block(int32_t *out, uint32_t n)
         g_st[2u * i] = g_st[2u * i + 1u] = 0;
     }
     ring_mod(g_mix[0], HALF_FRAMES);                /* after the knee: the sum of eight voices would overflow its products */
+    fx_drive(g_mix[0], HALF_FRAMES);
     dbg_meter(0, g_mix[0], HALF_FRAMES);
     chorus(g_mix[0], g_st, HALF_FRAMES);
     dbg_meter(1, g_st, 2u * HALF_FRAMES);
@@ -487,6 +523,7 @@ static void voices_block(int32_t *out, uint32_t n)
         fx_reverb(g_st, rv_wet, HALF_FRAMES);
         for (i = 0; i < 2u * HALF_FRAMES; i++) g_st[i] += rv_wet[i];
     }
+    fx_eq(g_st, HALF_FRAMES);
     dbg_meter(3, g_st, 2u * HALF_FRAMES);
     {
         int32_t pk = 0;

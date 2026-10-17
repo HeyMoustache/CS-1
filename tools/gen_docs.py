@@ -26,7 +26,7 @@ for m in re.finditer(r'\{"([^"]+)",\s*\{(.*?)\}\},', block, re.S):
 CAP = {"CW": "w", "CG": "g", "CR": "r", "CK": "k", "CY": "y", "CS": "s"}
 GROUP = {"TONES": "HOME", "VCO": "EDIT", "VCO 2": "EDIT", "VCF": "EDIT", "VCF EG": "EDIT", "VCA EG": "EDIT", "VCA": "EDIT", "TOUCH": "EDIT",
          "SUB OSC": "LFO", "SUB OSC 2": "LFO", "TOUCH RESP": "LFO", "AUTO AT": "LFO", "PERFORM": "ARP", "KEYBOARD": "ARP", "MODES": "ARP", "RIBBON": "ARP",
-         "RING MOD": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "REVERB 2": "FX", "PHASER": "FX", "MAIN": "GLO", "MIDI": "GLO", "KEYS": "GLO", "KEYS 2": "GLO"}
+         "RING MOD": "FX", "DRIVE": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "REVERB 2": "FX", "PHASER": "FX", "MAIN": "GLO", "MIDI": "GLO", "KEYS": "GLO", "KEYS 2": "GLO"}
 PAGE_NOTE = {
     "TONES": "The HOME page: the two rows of tone buttons, the sound's name, and the lower panel's performance levers.",
     "VCO": "The oscillator of the channel being edited (SEL picks I or II). The CS-80's VCO section.",
@@ -47,7 +47,8 @@ PAGE_NOTE = {
     "KEYS 2": "The pressure range and the top row's fixed velocity.",
     "RIBBON": "The SELECT encoder is the ribbon: turning it bends the pitch of everything sounding, as the CS-80's ribbon did. Instrument settings.",
     "RING MOD": "The ring modulator on both channels' sum: a sine carrier, its rate pushed up by an attack / decay envelope at every note.",
-    "CHORUS": "The chorus / tremolo: the CS-80's slow phasing tremolo between left and right (stereo here).",
+    "DRIVE": "Saturation on the sum of the voices before the chorus, and two shelves on the output.",
+    "CHORUS": "The chorus / tremolo / flanger: the CS-80's slow phasing tremolo between left and right (stereo here).",
     "DELAY": "A stereo delay, with SYNC overriding TIME in note divisions of the MIDI clock.",
     "DELAY 2": "The delay's ping-pong, the damping in its feedback, and TAPE: the character of a tape echo.",
     "REVERB 2": "The shimmer's interval.",
@@ -87,7 +88,8 @@ DESC = {
     ("RIBBON", "HOLD"): "OFF: the spring returns the bend to centre when the knob is still. ON: it stays where you leave it, and turning back through centre lands exactly on it.", ("RIBBON", "RANGE"): "How far a detent bends: 5 cents at FINE to two semitones at WIDE (two octaves at most).", ("RIBBON", "RETURN"): "The spring's time back to centre, 50 ms to 5 s (when HOLD is off).", ("RIBBON", "DELAY"): "How long the bend stays put after the knob goes still before the spring takes it back: none to 3 s, finer at the short end. The default is about 150 ms.",
     ("RING MOD", "MOD"): "How much of the ring-modulated signal replaces the plain one.", ("RING MOD", "SPEED"): "The carrier's rate, 0.5 Hz to 2 kHz: slow is a tremolo, fast is bells.",
     ("RING MOD", "DEPTH"): "How far the envelope pushes the rate up.", ("RING MOD", "DECAY"): "The envelope's decay: how long the rate takes to fall back after a note (its attack is fixed, short).",
-    ("CHORUS", "MODE"): "Off, chorus (slow and wide) or tremolo (faster, deeper in level).",
+    ("CHORUS", "MODE"): "Off, chorus (slow and wide), tremolo (faster, deeper in level) or flange (a short swept delay with feedback: the jet).",
+    ("DRIVE", "DRIVE"): "The sum pushed into the knee, up to nine times, and brought back in level: from a little warmth to a growl.", ("DRIVE", "LEVEL"): "The drive's output level, 12 dB either way of as it was; the drive itself keeps a quiet note at its level and holds a loud one.", ("DRIVE", "LOW"): "A low shelf below 250 Hz, 12 dB either way.", ("DRIVE", "HIGH"): "A high shelf above 2 kHz, 12 dB either way.",
     ("CHORUS", "SPEED"): "Its rate.", ("CHORUS", "DEPTH"): "Its depth.",
     ("DELAY", "TIME"): "10 ms to 1.1 s, when SYNC is FREE.", ("DELAY", "FEEDBK"): "Repeats.", ("DELAY", "MIX"): "The delay's level; 0 is off.",
     ("DELAY", "SYNC"): "FREE, or a note division of the MIDI clock that overrides TIME.",
@@ -196,7 +198,7 @@ for title, params in pages:
     w('<table><tr><th>Knob</th><th>Name</th><th>Range</th><th>What it does</th></tr>')
     for i, p in enumerate(params):
         rng = f'{p["lo"]} … {p["hi"]}' if p["hi"] or p["lo"] else {"K_FEET": "16' 8' 5.3' 4' 2.7' 2'", "K_WAVE": "SAW PULSE BOTH", "K_LWAVE": "SINE TRI SAW SAW DN SQR", "K_ONOFF": "OFF ON",
-                                                                  "K_CHO": "OFF CHORUS TREM", "K_DIV": "FREE 1/16 … 1/2", "K_LDIV": "FREE 1/4 … 4 BAR", "K_SUS": "I II", "K_TEMPO": "(read-only)", "K_CENT": "-98 … +98 cents", "K_SEMI": "-24 … +24"}.get(p["kind"], "0 … 127")
+                                                                  "K_CHO": "OFF CHORUS TREM FLANGE", "K_DIV": "FREE 1/16 … 1/2", "K_LDIV": "FREE 1/4 … 4 BAR", "K_SUS": "I II", "K_TEMPO": "(read-only)", "K_CENT": "-98 … +98 cents", "K_SEMI": "-24 … +24"}.get(p["kind"], "0 … 127")
         scope = {"CH": "channel", "GL": "global", "ST": "setting"}[p["scope"]]
         w(f'<tr><td class="k">KNOB {i + 1}</td><td class="k"><span class="cap {CAP[p["color"]]}"></span>{html.escape(p["name"])}</td><td>{html.escape(rng)}<br><small>{scope}</small></td><td>{html.escape(DESC.get((title, p["name"]), ""))}</td></tr>')
     w('</table>')
