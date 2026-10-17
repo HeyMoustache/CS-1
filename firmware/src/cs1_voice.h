@@ -77,7 +77,7 @@ typedef struct {
     int32_t pb256;                      /* the render's: the initial pitch bend left (negative, decays to 0) */
     int32_t drift, drift_to;            /* the render's: this voice's tuning drift (1/256 semitone) and where it wanders */
     uint32_t drift_rng;                 /* its own random numbers */
-    volatile int32_t from256;           /* the main loop's: where a glide starts (the note played before) */
+    volatile int32_t from256;           /* the main loop's: where a glide starts (this voice's note before, as the CS-80's voice cards glide) */
     chan_state_t c[NCH];
 } voice_t;
 
@@ -97,7 +97,7 @@ static volatile uint32_t sync_dly;      /* the delay's time from the MIDI clock,
 static volatile uint32_t sync_lfo;      /* the sub oscillator's phase step a tick from the MIDI clock */
 static volatile uint32_t lfo_reset;     /* counts up on MIDI start: the sub oscillator restarts its cycle */
 static uint32_t lfo_reset_seen;
-static int32_t last256 = 60 * 256;      /* the main loop's: the last note played (where a glide starts) */
+static int32_t last256 = 60 * 256;      /* the main loop's: the last note played (where a voice that never played glides from) */
 
 /* ---- the block's shared modulation, computed by CPU0 before the voices render (read-only after) */
 static int32_t g_lfo[NTICK];            /* the sub oscillator, Q15, a tick each */
@@ -487,17 +487,17 @@ static void voice_on(uint32_t note, uint32_t vel)
 {
     uint32_t v, pick = 0, best = 0xFFFFFFFFu;
     if (note > 127u) return;
-    for (v = 0; v < NV; v++) {                         /* the same note, else a free voice, else the oldest */
-        voice_t *w = &voices[v];
-        uint32_t score = w->note == note && w->gate ? 0u : w->active ? 0x80000000u + w->age : w->age;
+    for (v = 0; v < NV; v++) {                         /* the same note, else a free voice, else the oldest released one, else the oldest held */
+        voice_t *w = &voices[v];                       /* (gate counts as busy: a note taken this loop pass has not rendered yet) */
+        uint32_t score = w->note == note && w->gate ? 0u : w->gate ? 0xC0000000u + w->age : w->active ? 0x80000000u + w->age : w->age;
         if (score < best) { best = score; pick = v; }
     }
+    voices[pick].from256 = voices[pick].seen ? (int32_t)voices[pick].note * 256 : last256;   /* (before the note changes) */
     voices[pick].note = (uint8_t)note;
     voices[pick].vel = (uint8_t)(vel > 127u ? 127u : vel);
     voices[pick].age = ++voice_ages;
     voices[pick].at = 0;
     if (!voices[pick].drift_rng) voices[pick].drift_rng = 0x9E3779B9u * (pick + 1u);
-    voices[pick].from256 = last256;
     last256 = (int32_t)note * 256;
     voices[pick].gate = 1;
     voices[pick].trig++;                               /* last: the render starts the note on seeing it */

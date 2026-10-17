@@ -77,7 +77,7 @@ DESC = {
     ("TOUCH RESP", "SPEED"): "Pressure speeds the sub oscillator up.", ("TOUCH RESP", "VCO"): "Pressure adds vibrato.", ("TOUCH RESP", "VCF"): "Pressure adds filter sweep.",
     ("AUTO AT", "DELAY"): "How long after the note the curve starts, up to about four seconds.", ("AUTO AT", "RISE"): "How long it takes to reach its level.",
     ("AUTO AT", "LEVEL"): "The pressure it reaches; 0 switches the curve off.", ("AUTO AT", "FALL"): "How fast it dies away after the key goes.",
-    ("PERFORM", "PORTA"): "Portamento time: about two seconds an octave at full. 0 is off.", ("PERFORM", "GLISS"): "Glissando: the glide in semitone steps.",
+    ("PERFORM", "PORTA"): "Portamento time: about two seconds an octave at full. 0 is off. Each voice glides from its own last note, as the CS-80's voice cards do, so a chord glides in parallel from the chord before.", ("PERFORM", "GLISS"): "Glissando: the glide in semitone steps.",
     ("PERFORM", "DETUNE"): "Channel II sharp or flat against I, about half a semitone each way.", ("PERFORM", "VINTAG"): "Vintage: each voice wanders to a new tuning offset every second or so, up to 12 cents.",
     ("KEYBOARD", "BRIL.LO"): "Brighter (+) or darker (−) towards the bottom of the keyboard.", ("KEYBOARD", "BRIL.HI"): "The same towards the top.",
     ("KEYBOARD", "LEV.LO"): "Louder or quieter towards the bottom (it can only cut).", ("KEYBOARD", "LEV.HI"): "The same towards the top.",

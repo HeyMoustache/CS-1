@@ -180,7 +180,8 @@ static const patch_t INIT_PATCH = {                   /* the globals; sound_load
 /* a sound: a tone on each channel, the globals, and a few tweaks to the channels' own parameters. A field left 0
  * takes the default noted; a feet entry is FEET + 1 (0 = 8'). The classic ones are recipes after what is
  * documented about the records (the presets used, the technique), not transcriptions. */
-typedef struct { uint8_t ch, off, val; } tweak_t;      /* ch 0 / 1 (2: both), offsetof(chan_patch_t, ..), the value */
+typedef struct { uint8_t ch, off, val; } tweak_t;      /* ch 0 / 1 (2: both), offsetof(chan_patch_t, ..), the value. A list shorter than
+                                                        * 12 MUST end in TWEND: a zero-filled entry reads as channel I, feet, 16' */
 #define TW(c, f, v) {c, (uint8_t)offsetof(chan_patch_t, f), v}
 #define TWEND {3, 0, 0}
 typedef struct {
@@ -245,7 +246,7 @@ static const sound_t SOUNDS[] = {
      .at_vco = 19, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 40, .v_a = 55, .v_r = 100,
      .aat_delay = 40, .aat_rise = 80, .aat_level = 90, .rv_size = 100,
      .dly_time = 95, .dly_fb = 70, .dly_mix = 35, .dly_tape = 50, .dly_ping = 1,
-     .dly_sync = 4, .tw = {TW(2, f_il, 64), TW(2, f_al, 104), TW(2, f_a, 94), TW(2, f_d, 120), TW(2, f_r, 120), TW(2, v_s, 120)}},
+     .dly_sync = 4, .tw = {TW(2, f_il, 64), TW(2, f_al, 104), TW(2, f_a, 94), TW(2, f_d, 120), TW(2, f_r, 120), TW(2, v_s, 120), TWEND}},
     /* Blade Runner Blues as a forum player had it on the Arturia: Brass 1 + 2 with the performance side up */
     {.name = "BR BLUES 2", .rv_mix = 68, .tone = {T_BRS1, T_BRS2}, .level = {115, 110}, .brill = 66, .reso = 66, .detune = 70,
      .porta = 24, .at_vco = 34, .at_brill = 110, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 70, .v_a = 36, .v_r = 85,
@@ -254,7 +255,7 @@ static const sound_t SOUNDS[] = {
     /* the End Titles' sequenced bass: two saws an octave apart, the filter under an envelope; no chorus */
     {.name = "END TITLES", .rv_mix = 20, .tone = {T_BRS1, T_BRS2}, .feet1 = {F16, F8}, .level = {118, 100}, .brill = 60, .reso = 72, .detune = 66,
      .rv_size = 70, .dly_time = 80, .dly_fb = 40, .dly_mix = 25, .dly_tape = 50, .dly_ping = 1,
-     .dly_sync = 4, .tw = {TW(2, f_il, 64), TW(2, f_al, 100), TW(2, f_a, 0), TW(2, f_d, 70), TW(2, v_a, 0), TW(2, v_r, 40)}},
+     .dly_sync = 4, .tw = {TW(2, f_il, 64), TW(2, f_al, 100), TW(2, f_a, 0), TW(2, f_d, 70), TW(2, v_a, 0), TW(2, v_r, 40), TWEND}},
     {.name = "CHIMES", .rv_mix = 60, .tone = {T_FLUTE, T_BASS}, .feet1 = {F4, F4}, .level = {110, 90}, .brill = 70,
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 40, .rm_mod = 115, .rm_spd = 78, .rm_depth = 60, .rm_d = 85,
      .rv_size = 105, .rv_shim = 30, .tw = {TWEND}},
@@ -263,7 +264,7 @@ static const sound_t SOUNDS[] = {
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 40, .rv_size = 80, .tw = {TWEND}},
     {.name = "AFRICA 2", .rv_mix = 20, .tone = {T_STR3, T_STR4}, .level = {115, 110}, .brill = 60, .reso = 64, .detune = 66,
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 50, .rv_size = 70,
-     .tw = {TW(2, lp_cut, 70), TW(2, f_al, 76), TW(2, f_a, 59), TW(2, f_d, 116), TW(2, v_d, 124), TW(2, v_s, 0)}},
+     .tw = {TW(2, lp_cut, 70), TW(2, f_al, 76), TW(2, f_a, 59), TW(2, f_d, 116), TW(2, v_d, 124), TW(2, v_s, 0), TWEND}},
     {.name = "ROSANNA", .rv_mix = 28, .tone = {T_BRS1, T_BRS2}, .level = {115, 110}, .brill = 62, .reso = 68, .detune = 67,
      .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 50, .v_a = 20, .rv_size = 70, .tw = {TWEND}},
     {.name = "HUMAN NATURE", .rv_mix = 32, .tone = {T_STR1, T_BRS2}, .level = {110, 110}, .brill = 58, .reso = 80, .detune = 66,
@@ -274,7 +275,7 @@ static const sound_t SOUNDS[] = {
     /* Syntorial's Billie Jean keys recipe: a narrow pulse, PWM at a quarter note, a short filter blip, fast chorus */
     {.name = "BILLIE KEYS", .rv_mix = 32, .tone = {T_HARP1, T_HARP2}, .level = {118, 0}, .mix = 0, .brill = 62, .reso = 60,
      .cho_mode = CHO_CHORUS, .cho_spd = 60, .cho_depth = 45, .rv_size = 75,
-     .tw = {TW(0, pw, 113), TW(0, pwm, 76), TW(0, pwm_spd, 63), TW(0, lp_cut, 83), TW(0, f_al, 70), TW(0, f_d, 83)}},
+     .tw = {TW(0, pw, 113), TW(0, pwm, 76), TW(0, pwm_spd, 63), TW(0, lp_cut, 83), TW(0, f_al, 70), TW(0, f_d, 83), TWEND}},
     /* ---- the eighties */
     {.name = "BORN USA", .rv_mix = 36, .tone = {T_BRS1, T_STR2}, .level = {118, 100}, .brill = 74, .reso = 62, .detune = 68,
      .cho_mode = CHO_CHORUS, .cho_spd = 26, .cho_depth = 45, .v_a = 12, .rv_size = 90, .tw = {TW(1, lp_cut, 100), TWEND}},
@@ -305,7 +306,7 @@ static const sound_t SOUNDS[] = {
      .tw = {TW(1, wave, W_PULSE), TW(1, pw, 40), TW(1, pwm, 70), TW(1, hp_cut, 55), TW(0, hp_cut, 50), TWEND}},
     {.name = "4001 PLUCK", .rv_mix = 36, .tone = {T_STR3, T_STR4}, .level = {118, 0}, .mix = 0, .brill = 58, .reso = 100,
      .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 50, .v_r = 100, .rv_size = 90,
-     .tw = {TW(0, hp_cut, 55), TW(0, lp_cut, 35), TW(0, lp_res, 120), TW(0, f_al, 110), TW(0, f_d, 45), TW(0, f_a, 0)}},
+     .tw = {TW(0, hp_cut, 55), TW(0, lp_cut, 35), TW(0, lp_res, 120), TW(0, f_al, 110), TW(0, f_d, 45), TW(0, f_a, 0), TWEND}},
     {.name = "4001 STRINGS", .rv_mix = 40, .ph_rate = 22, .ph_depth = 60, .ph_fb = 30, .ph_mix = 45, .tone = {T_STR1, T_STR2}, .feet1 = {F8, F16}, .level = {115, 110}, .brill = 110, .reso = 64, .detune = 68,
      .lfo_spd = 78, .lfo_vco = 20, .cho_mode = CHO_CHORUS, .cho_spd = 22, .cho_depth = 60, .v_a = 64, .v_r = 90,
      .rv_size = 95, .tw = {TW(2, lp_cut, 127), TW(2, hp_cut, 0), TWEND}},
@@ -324,13 +325,13 @@ static const sound_t SOUNDS[] = {
      .tw = {TW(0, f_il, 16), TW(0, f_al, 112), TW(0, lp_cut, 80), TWEND}},
     {.name = "CLARINET", .rv_mix = 28, .tone = {T_CLAV1, T_EPIANO}, .level = {118, 0}, .mix = 0, .brill = 58, .lfo_spd = 62, .lfo_vco = 22,
      .v_a = 40, .v_r = 50, .rv_size = 80,
-     .tw = {TW(0, pw, 0), TW(0, pwm, 0), TW(0, lp_cut, 72), TW(0, f_al, 76), TW(0, f_d, 70), TW(0, lp_res, 20)}},
+     .tw = {TW(0, pw, 0), TW(0, pwm, 0), TW(0, lp_cut, 72), TW(0, f_al, 76), TW(0, f_d, 70), TW(0, lp_res, 20), TWEND}},
     {.name = "OBOE", .rv_mix = 28, .tone = {T_HARP1, T_HARP2}, .level = {118, 0}, .mix = 0, .brill = 64, .lfo_spd = 64, .lfo_vco = 20,
      .v_a = 35, .v_r = 50, .rv_size = 80,
-     .tw = {TW(0, pw, 113), TW(0, hp_cut, 60), TW(0, lp_cut, 90), TW(0, f_al, 84), TW(0, f_d, 65), TW(0, v_s, 110)}},
+     .tw = {TW(0, pw, 113), TW(0, hp_cut, 60), TW(0, lp_cut, 90), TW(0, f_al, 84), TW(0, f_d, 65), TW(0, v_s, 110), TWEND}},
     {.name = "TIMPANI", .rv_mix = 36, .tone = {T_GTR1, T_BASS}, .feet1 = {F8, F16}, .level = {100, 118}, .brill = 56, .reso = 76, .detune = 64,
      .lfo_spd = 40, .rv_size = 85,
-     .tw = {TW(0, wave, W_SAW), TW(0, noise, 120), TW(0, vcf_lv, 100), TW(0, f_r, 60), TW(1, sine, 100), TW(1, pwm, 40)}},
+     .tw = {TW(0, wave, W_SAW), TW(0, noise, 120), TW(0, vcf_lv, 100), TW(0, f_r, 60), TW(1, sine, 100), TW(1, pwm, 40), TWEND}},
     {.name = "STRINGS 1+2", .rv_mix = 28, .tone = {T_STR1, T_STR2}, .cho_mode = CHO_OFF, .rv_size = 80, .tw = {TWEND}},
     {.name = "BRASS 1+2", .rv_mix = 20, .tone = {T_BRS1, T_BRS2}, .cho_mode = CHO_OFF, .rv_size = 60, .tw = {TWEND}},
     {.name = "FLUTE+BASS", .rv_mix = 24, .tone = {T_FLUTE, T_BASS}, .level = {110, 100}, .cho_mode = CHO_OFF, .rv_size = 70, .tw = {TWEND}},
