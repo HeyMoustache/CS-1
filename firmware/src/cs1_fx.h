@@ -40,8 +40,9 @@ static void fx_delay(int32_t *st, uint32_t n)       /* st: L R L R ..., in place
         int32_t in = (st[2u * i] + st[2u * i + 1u]) >> 1;
         int32_t tap, tap2, back;
         if (tape) {                                 /* read between frames at the wandering position */
-            uint32_t fr = (uint32_t)(dly_m16 + 32 * 16) & 15u, a, b;
+            uint32_t fr, a, b;
             dly_m16 += dly_m16_d; m16 = dly_m16 + 32 * 16;   /* kept positive */
+            fr = (uint32_t)m16 & 15u;                    /* (the fraction and the whole frame from the same position: taken a step apart, every crossing jumped a frame) */
             back = clamp((int32_t)time + (m16 >> 4) - 32, 2, (int32_t)DLY_LEN - 2);   /* (the wander kept inside the line at the extremes) */
             a = dly_back((uint32_t)back); b = dly_back((uint32_t)back + 1u);
             tap = dly_line[a] + (((dly_line[b] - dly_line[a]) * (int32_t)fr) >> 4);
@@ -109,7 +110,7 @@ static void fx_phaser(int32_t *st, uint32_t n)
 #define RV_D2_R 6241u
 static int16_t rv_pre[1024] FM1_POOL;               /* the pre-delay: 20 ms */
 static int32_t rv_in1[210] FM1_POOL, rv_in2[158] FM1_POOL, rv_in3[561] FM1_POOL, rv_in4[410] FM1_POOL;   /* input diffusion, at the signal's scale */
-static int32_t rv_ap0l[RV_AP0_L + 64u] FM1_POOL, rv_ap0r[RV_AP0_R + 64u] FM1_POOL;   /* the tanks: 32 bits at Q2 (four times the signal) */
+static int32_t rv_ap0l[RV_AP0_L + 64u] FM1_POOL, rv_ap0r[RV_AP0_R + 64u] FM1_POOL;   /* the tanks: 32 bits at Q4 (sixteen times the signal) */
 static int32_t rv_d1l[RV_D1_L] FM1_POOL, rv_d1r[RV_D1_R] FM1_POOL;
 static int32_t rv_ap1l[RV_AP1_L] FM1_POOL, rv_ap1r[RV_AP1_R] FM1_POOL;
 static int32_t rv_d2l[RV_D2_L] FM1_POOL, rv_d2r[RV_D2_R] FM1_POOL;
@@ -127,7 +128,7 @@ static uint32_t rv_hot;                             /* samples a tank ran far be
 #endif
 
 /* every buffer keeps its own write index and wraps by a compare: no modulo (the chip has no divider). The tanks are
- * 32-bit at Q2 (four times the signal): the 16-bit tanks at an eighth of the signal truncated on every pass, and
+ * 32-bit at Q4 (sixteen times the signal): the 16-bit tanks at an eighth of the signal truncated on every pass, and
  * the recirculated rounding was a hiss under every tail */
 static inline uint32_t wrap_back(uint32_t w, uint32_t len, uint32_t back) { uint32_t p = w + len - back; return p >= len ? p - len : p; }
 /* a x b / 32768 for |a| up to 2^23 (a Q2 tank value), toward zero: two products, neither can wrap */
@@ -193,7 +194,7 @@ static void fx_reverb(const int32_t *st, int32_t *wet, uint32_t n)   /* st: L R 
         x = allpass32(rv_in2, 158u, &rv_wi[1], x, 24576);
         x = allpass32(rv_in3, 561u, &rv_wi[2], x, 20480);
         x = allpass32(rv_in4, 410u, &rv_wi[3], x, 20480);
-        x <<= 2;                                     /* into the tanks' Q2 */
+        x <<= 4;                                     /* into the tanks' Q4 */
         /* the two tanks, each fed by the input plus the other's end */
         ml = (uint32_t)rv_m16[0]; mr = (uint32_t)rv_m16[1];
         /* the taps are read before this frame's writes move the indices (Dattorro's nodes, scaled) */
@@ -215,11 +216,11 @@ static void fx_reverb(const int32_t *st, int32_t *wet, uint32_t n)   /* st: L R 
         tr = allpass32(rv_ap1r, RV_AP1_R, &rv_wap1[1], tr, 16384);
         tl = delay32(rv_d2l, RV_D2_L, &rv_wd2[0], tl);
         tr = delay32(rv_d2r, RV_D2_R, &rv_wd2[1], tr);
-        if (tl > 2000000 || tl < -2000000 || tr > 2000000 || tr < -2000000) rv_hot++;   /* far beyond a held chord's level: a meter */
+        if (tl > 7000000 || tl < -7000000 || tr > 7000000 || tr < -7000000) rv_hot++;   /* near the wide multiply's limit (2^23): a meter */
         rv_fbl = mulq15w(tl, decay);                 /* into the other tank next frame */
         rv_fbr = mulq15w(tr, decay);
         rv_w++;
-        { int32_t l2 = (l * 3 + r) >> 5, r2 = (r * 3 + l) >> 5; l = l2; r = r2; }   /* 0.375 with a quarter of each in the other (wide, mono-safe), out of Q2 */
+        { int32_t l2 = (l * 3 + r) >> 7, r2 = (r * 3 + l) >> 7; l = l2; r = r2; }   /* 0.375 with a quarter of each in the other (wide, mono-safe), out of Q4 */
         { int32_t yl = ((l - rv_dcxl) << 6) + rv_dcyl - leak10(rv_dcyl), yr = ((r - rv_dcxr) << 6) + rv_dcyr - leak10(rv_dcyr);   /* DC blockers, ~7 Hz, state in 1/64 */
           rv_dcxl = l; rv_dcyl = yl; l = yl >> 6; rv_dcxr = r; rv_dcyr = yr; r = yr >> 6; }
         l = soft_knee(l, 20000); r = soft_knee(r, 20000);   /* a loud wash bends rather than slams the master knee */
