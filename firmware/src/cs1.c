@@ -1227,9 +1227,13 @@ static void app_loop(void)
     fm1_led_key(BTN_SAVE, save_arm != 0);
     fm1_led_key(BTN_REC, learn_arm != 0);
 
-    load = audio_cycles / (HALF_FRAMES * 10u * FM1_TICKS_PER_US / (FS / 1000u) + 1u);   /* ~% of the block's time */
-    load_now = load;
-    wload_now = audio_worker.last_job_ticks / (HALF_FRAMES * 10u * FM1_TICKS_PER_US / (FS / 1000u) + 1u);
+    {                                                  /* the load: ~% of the block's time, averaged over ~64 passes so a reading holds still */
+        static uint32_t load_acc, wload_acc;
+        uint32_t l = audio_cycles / (HALF_FRAMES * 10u * FM1_TICKS_PER_US / (FS / 1000u) + 1u);
+        uint32_t w = audio_worker.last_job_ticks / (HALF_FRAMES * 10u * FM1_TICKS_PER_US / (FS / 1000u) + 1u);
+        load_acc += ((l << 6) - load_acc) >> 6; wload_acc += ((w << 6) - wload_acc) >> 6;
+        load = load_acc >> 6; load_now = load; wload_now = wload_acc >> 6;
+    }
     if (page != page_drawn) { page_drawn = page; chan_drawn = set.chan; load_drawn = load; draw_page(load); lit_drawn = ~0u; tones_drawn = ~0u; content_dirty = 0; }
     else if (content_dirty || set.chan != chan_drawn) {   /* the same page, new content (a sound, a tone, the channel): redrawn over itself, no flash */
         chan_drawn = set.chan;                          /* the same page, new content: every part redrawn over itself, no flash */

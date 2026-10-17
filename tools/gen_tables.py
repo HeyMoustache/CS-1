@@ -26,7 +26,7 @@ w("#include <stdint.h>")
 w(f"#define CTL {CTL}u                      /* frames per control tick ({TICK_S * 1000:.4f} ms) */")
 
 # a sine cycle, 1024 points, Q15
-table("SINE", "int16_t", [round(32767 * math.sin(2 * math.pi * i / 1024)) for i in range(1024)], hot=True)
+table("SINE", "int16_t", [round(32767 * math.sin(2 * math.pi * i / 1024)) for i in range(1024)])
 
 # phase increment per frame of MIDI 120 + k / 16 (k = 0..191, the top octave): lower octaves shift right
 table("PITCH16", "uint32_t", [round(440 * 2 ** ((120 + k / 16 - 69) / 12) * 2 ** 32 / FS) for k in range(192)], 6, "{}u")
@@ -42,7 +42,7 @@ table("SVF_G", "int32_t", [g_of(n) for n in range(137)], 8)
 table("SVF_KT", "uint16_t", [round(4096 / 10 ** ((-6 + 16 * (1 - math.exp(-(i / 12.7) / 1.8))) / 20)) for i in range(128)], 8)
 
 # tanh(x / 32768) * 32767 for x = 0, 256, .. 65536 (257 points): the soft clip
-table("TANH_Q15", "int16_t", [round(32767 * math.tanh(i * 256 / 32768)) for i in range(257)], hot=True)
+table("TANH_Q15", "int16_t", [round(32767 * math.tanh(i * 256 / 32768)) for i in range(257)])
 
 # envelope times: knob 0..127 -> 1 ms .. 12 s, exponential
 def env_time(i):
