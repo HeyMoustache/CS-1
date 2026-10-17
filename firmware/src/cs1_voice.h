@@ -16,7 +16,7 @@
 
 enum { FT_16 = 0, FT_8, FT_53, FT_4, FT_27, FT_2 };  /* feet: the octave of a channel, with the fifths (5 1/3', 2 2/3') between */
 enum { W_SAW = 0, W_PULSE, W_BOTH };                 /* the VCO's wave */
-enum { LW_SINE = 0, LW_TRI, LW_SAW, LW_SAWDN, LW_SQR };   /* the sub oscillator's: sine, triangle, sawtooth, inverted sawtooth, square */
+enum { LW_SINE = 0, LW_TRI, LW_SAW, LW_SAWDN, LW_SQR, LW_NOISE };   /* the sub oscillator's: sine, triangle, sawtooth, inverted sawtooth, square, noise (a random level a cycle) */
 
 typedef struct {                  /* a channel's panel: 0..127 unless said; the order is the settings' and
                                    * tools/gen_presets.py's */
@@ -106,6 +106,7 @@ static int16_t g_noise[HALF_FRAMES];    /* white noise, Q15 */
 static int32_t g_mix[2][HALF_FRAMES];   /* each core's voices, mono */
 static int32_t g_at;                    /* the most pressure on any sounding voice, 0..127 */
 static uint32_t lfo_ph, pwm_ph[NCH], noise_st = 0x12345678u;
+static int32_t lfo_sh;                  /* the NOISE function's level: a new random one each cycle, at SPEED */
 
 static int32_t lfo_shape(uint32_t ph, uint32_t wave)
 {
@@ -129,8 +130,10 @@ static void block_prepare(void)
     spd = patch.lfo_spd + ((127u - patch.lfo_spd) * (uint32_t)g_at * patch.at_spd >> 14);   /* AFTER SPEED */
     if (lfo_reset != lfo_reset_seen) { lfo_reset_seen = lfo_reset; lfo_ph = 0; }
     for (t = 0; t < NTICK; t++) {
+        uint32_t was = lfo_ph;
         lfo_ph += patch.lfo_sync ? sync_lfo : LFO_INC[spd > 127u ? 127u : spd];
-        g_lfo[t] = lfo_shape(lfo_ph, patch.lfo_wave);
+        if (lfo_ph < was) lfo_sh = (int32_t)(noise32(&noise_st) & 0xFFFEu) - 32767;   /* a cycle ended: a new level */
+        g_lfo[t] = patch.lfo_wave == LW_NOISE ? lfo_sh : lfo_shape(lfo_ph, patch.lfo_wave);
         for (ch = 0; ch < NCH; ch++) {
             pwm_ph[ch] += LFO_INC[patch.ch[ch].pwm_spd];
             g_pwm[ch][t] = lfo_shape(pwm_ph[ch], LW_TRI);
@@ -246,7 +249,7 @@ static void chan_render(voice_t *v, uint32_t ch, int32_t *mix)
         pw_d = p->pw * 7598415 + mulq15(g_pwm[ch][t], p->pwm) * 7598415;
         pw = 0x80000000u + (uint32_t)clamp(pw_d, -966367641, 966367641);
         /* the filters: the knobs as a pitch, then the envelope, brilliance, the LFO and the keyboard */
-        cut16 = (s->fenv >> 8) + brill16 + ((lfo * vcf_depth) >> 11) + kbd16 + kbc16 + touch16;
+        cut16 = (s->fenv >> 8) + brill16 + ((lfo * vcf_depth) >> 15) + kbd16 + kbc16 + touch16;   /* (vcf_depth is in 1/16 semitone already) */
         hp_k = SVF_K(clamp(p->hp_res + reso, 0, 127));
         lp_k = SVF_K(clamp(p->lp_res + reso, 0, 127));
         svf_coef(&s->hp, 128 + p->hp_cut * 15 + cut16, hp_k);   /* knob: MIDI 8 .. 127 (13 Hz .. 12.5 kHz) */

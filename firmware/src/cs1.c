@@ -86,7 +86,7 @@ static const page_t PAGES[NPAGE] = {
     {"VCA",    {CH(f_r, "VCF R", 127, K_NUM, CY, "LONG", "SHORT"), CH(level, "LEVEL", 127, K_NUM, CS, "10", "0"), NONE, NONE}},
     {"TOUCH",  {CH(it_brill, "I.BRIL", 127, K_NUM, CG, "10", "0"), CH(it_level, "I.LEV", 127, K_NUM, CS, "10", "0"),
                 CH(at_brill, "A.BRIL", 127, K_NUM, CG, "10", "0"), CH(at_level, "A.LEV", 127, K_NUM, CS, "10", "0")}},
-    {"SUB OSC", {GL(lfo_wave, "FUNC", 4, K_LWAVE, CK, "", ""), GL(lfo_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
+    {"SUB OSC", {GL(lfo_wave, "FUNC", 5, K_LWAVE, CK, "", ""), GL(lfo_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
                  GL(lfo_vco, "VCO", 127, K_NUM, CW, "10", "0"), GL(lfo_vcf, "VCF", 127, K_NUM, CG, "10", "0")}},
     {"SUB OSC 2", {GL(lfo_vca, "VCA", 127, K_NUM, CS, "10", "0"), GL(lfo_sync, "SYNC", 5, K_LDIV, CK, "", ""), NONE, NONE}},
     {"TOUCH RESP", {GL(pbend, "P.BEND", 127, K_NUM, CW, "10", "0"), GL(at_spd, "SPEED", 127, K_NUM, CW, "10", "0"),
@@ -127,7 +127,7 @@ static const uint8_t PAGE_GROUP[NPAGE][2] = {
     {PG_MAIN, 4}, {PG_MAIN, 4}, {PG_MAIN, 4}, {PG_MAIN, 4}};
 static const char *const N_FEET[6] = {"16'", "8'", "5.3'", "4'", "2.7'", "2'"};
 static const char *const N_WAVE[3] = {"SAW", "PULSE", "BOTH"};
-static const char *const N_LWAVE[5] = {"SINE", "TRI", "SAW", "SAW DN", "SQR"};
+static const char *const N_LWAVE[6] = {"SINE", "TRI", "SAW", "SAW DN", "SQR", "NOISE"};
 static const char *const N_ONOFF[2] = {"OFF", "ON"};
 static const char *const N_CHO[3] = {"OFF", "CHORUS", "TREM"};
 static const char *const N_DIV[8] = {"FREE", "1/16", "1/8T", "1/8", "1/8D", "1/4", "1/4D", "1/2"};   /* the delay's divisions */
@@ -280,7 +280,7 @@ static const sound_t SOUNDS[] = {
     {.name = "BORN USA", .rv_mix = 36, .tone = {T_BRS1, T_STR2}, .level = {118, 100}, .brill = 74, .reso = 62, .detune = 68,
      .cho_mode = CHO_CHORUS, .cho_spd = 26, .cho_depth = 45, .v_a = 12, .rv_size = 90, .tw = {TW(1, lp_cut, 100), TWEND}},
     {.name = "XMAS BASS", .rv_mix = 16, .tone = {T_STR1, T_BASS}, .level = {0, 120}, .mix = 127, .brill = 84, .reso = 118,
-     .lfo_wave = LW_SAWDN, .lfo_spd = 70, .lfo_vcf = 60, .rv_size = 50, .tw = {TW(1, v_r, 40), TWEND}},
+     .lfo_wave = LW_SAWDN, .lfo_spd = 70, .lfo_vcf = 127, .rv_size = 50, .tw = {TW(1, v_r, 40), TWEND}},
     {.name = "WHO BASS", .rv_mix = 20, .tone = {T_BASS, T_BASS}, .feet1 = {F16, F8}, .level = {120, 90}, .brill = 70, .reso = 90, .detune = 66,
      .rv_size = 60, .tw = {TW(2, lp_res, 90), TW(2, f_al, 100), TW(2, f_d, 60), TWEND}},
     {.name = "BABOOSHKA", .rv_mix = 32, .tone = {T_FLUTE, T_ORG2}, .level = {118, 55}, .brill = 66, .detune = 67,
@@ -296,7 +296,7 @@ static const sound_t SOUNDS[] = {
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 65, .v_a = 55, .v_r = 90, .rv_size = 110,
      .dly_time = 100, .dly_fb = 50, .dly_mix = 35, .dly_tape = 50, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
     {.name = "OXYGENE", .rv_mix = 64, .tone = {T_STR3, T_STR4}, .feet1 = {F8, F16}, .level = {115, 100}, .brill = 56, .detune = 72,
-     .lfo_spd = 50, .lfo_vcf = 25, .cho_mode = CHO_CHORUS, .cho_spd = 14, .cho_depth = 95, .v_a = 90, .v_r = 110,
+     .lfo_spd = 50, .lfo_vcf = 100, .cho_mode = CHO_CHORUS, .cho_spd = 14, .cho_depth = 95, .v_a = 90, .v_r = 110,
      .rv_size = 120, .rv_shim = 20, .tw = {TW(0, pwm, 60), TW(0, pwm_spd, 36), TW(0, wave, W_BOTH), TWEND}},
     {.name = "ENO WASH", .rv_mix = 76, .ph_rate = 12, .ph_depth = 90, .ph_fb = 50, .ph_mix = 50, .tone = {T_STR3, T_ORG2}, .feet1 = {F8, F16}, .level = {110, 80}, .brill = 48, .detune = 70,
      .cho_mode = CHO_CHORUS, .cho_spd = 12, .cho_depth = 85, .v_a = 110, .v_r = 115, .rv_size = 125, .rv_damp = 70,
@@ -358,7 +358,7 @@ static const sound_t SOUNDS[] = {
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 70, .v_a = 60, .aat_delay = 45, .aat_rise = 70, .aat_level = 95, .rv_mix = 50, .rv_size = 100,
      .dly_time = 100, .dly_fb = 50, .dly_mix = 40, .dly_ping = 1, .dly_sync = 3, .dly_tape = 65, .vintage = 40, .tw = {TWEND}},
     {.name = "DEEP DRIFT", .tone = {T_STR3, T_BASS}, .feet1 = {F8, F16}, .level = {105, 115}, .brill = 50, .reso = 70, .detune = 75, .lfo_wave = LW_SINE,
-     .lfo_spd = 30, .lfo_vcf = 25, .cho_mode = CHO_CHORUS, .cho_spd = 14, .cho_depth = 80, .v_a = 90, .v_r = 100, .aat_delay = 50, .aat_rise = 80,
+     .lfo_spd = 30, .lfo_vcf = 100, .cho_mode = CHO_CHORUS, .cho_spd = 14, .cho_depth = 80, .v_a = 90, .v_r = 100, .aat_delay = 50, .aat_rise = 80,
      .aat_level = 80, .rv_mix = 60, .rv_size = 110, .rv_damp = 65, .rv_shim = 25, .ph_rate = 8, .ph_depth = 100, .ph_fb = 55, .ph_mix = 70, .vintage = 70,
      .tw = {TWEND}},
     /* ---- after CS-80 V presets, our names (tools/arturia_convert.py) */
@@ -385,7 +385,7 @@ static int patch_valid(const patch_t *p)            /* every byte a knob could h
         if (b[i] > 127u) return 0;
     for (ch = 0; ch < NCH; ch++)
         if (p->ch[ch].feet > 5u || p->ch[ch].wave > 2u) return 0;
-    return p->lfo_wave <= 4u && p->gliss <= 1u && p->cho_mode <= 2u && p->dly_ping <= 1u && p->dly_sync <= 7u && p->lfo_sync <= 5u && p->rv_shift <= 24u;
+    return p->lfo_wave <= 5u && p->gliss <= 1u && p->cho_mode <= 2u && p->dly_ping <= 1u && p->dly_sync <= 7u && p->lfo_sync <= 5u && p->rv_shift <= 24u;
 }
 static int slot_used(uint32_t i) { return slot_at(i)->magic == SLOT_MAGIC && patch_valid(&slot_at(i)->patch); }
 static uint8_t *param_ptr(const pdesc_t *d)
@@ -557,7 +557,7 @@ static void fmt_value(const pdesc_t *d, uint32_t v, char *s)   /* up to 6 charac
     switch (d->kind) {
     case K_FEET: src = N_FEET[v % 6u]; break;
     case K_WAVE: src = N_WAVE[v > 2u ? 2u : v]; break;
-    case K_LWAVE: src = N_LWAVE[v > 4u ? 4u : v]; break;
+    case K_LWAVE: src = N_LWAVE[v > 5u ? 5u : v]; break;
     case K_ONOFF: src = N_ONOFF[v & 1u]; break;
     case K_CHO: src = N_CHO[v > 2u ? 2u : v]; break;
     case K_BIP: n -= 64; break;
@@ -750,7 +750,8 @@ static void draw_shape(void)
     } else {                                           /* the sub oscillator's waveform, two cycles */
         int32_t i, px = 0, py = 15;
         for (i = 0; i <= 120; i++) {
-            int32_t v = lfo_shape((uint32_t)i * 71582788u, patch.lfo_wave), yy = 15 - v * 12 / 32767;
+            int32_t v = patch.lfo_wave == LW_NOISE ? (int32_t)(((uint32_t)(i / 60) + 7u) * 2654435761u >> 16 & 0xFFFEu) - 32767   /* a level a cycle */
+                                                   : lfo_shape((uint32_t)i * 71582788u, patch.lfo_wave), yy = 15 - v * 12 / 32767;
             if (i) cv_line(px, py, i * 2, yy, C_SILK);
             px = i * 2; py = yy;
         }
@@ -1145,7 +1146,7 @@ static void app_loop(void)
                 if (page != cc_page) { cc_page = (uint8_t)page; cc_latched[0] = cc_latched[1] = cc_latched[2] = cc_latched[3] = 0; }
                 if (!cc_latched[j]) {                                   /* not yet: only once the knob reaches or crosses the value */
                     uint32_t near = (v > cur ? v - cur : cur - v) <= (d->max > 16u ? 3u : 0u);
-                    uint32_t crossed = (cc_last[j] < cur && v >= cur) || (cc_last[j] > cur && v <= cur);
+                    uint32_t crossed = (cc_last[j] <= cur && v >= cur) || (cc_last[j] >= cur && v <= cur);   /* (a knob last seen AT the value has hold of it) */
                     cc_last[j] = (uint8_t)v;
                     if (!near && !crossed) continue;
                     cc_latched[j] = 1;
