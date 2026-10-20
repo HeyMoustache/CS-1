@@ -182,9 +182,18 @@ static void ota_show(uint32_t step, int32_t code)
     draw_text_box(0, 92, 240, &FONT_S, "UPDATE", C_WHITE, 1);
     if (step < 9u)
         draw_text_box(0, 124, 240, &FONT_S, STEP[step < 6u ? step : 0], C_WHITE, 1);
-    else
-        draw_text_box(0, 124, 240, &FONT_S, code == 1 ? "DRY RUN OK" : "FAILED", C_WHITE, 1);
+    else {
+        const char *why = code == 1 ? "DRY RUN OK" : code == -5 ? "FAILED: HEAD KEY" : code == -7 ? "FAILED: LOADER" :
+                          code == -13 ? "FAILED: NO CONFIRM" : code == -3 || code == -2 ? "FAILED: PACKAGE" : "FAILED";
+        draw_text_box(0, 124, 240, &FONT_S, why, C_WHITE, 1);
+        if (code < 0) {
+            draw_text_box(0, 164, 240, &FONT_S, "USB RESCUE: HOLD OCT-", C_WHITE, 1);
+            draw_text_box(0, 184, 240, &FONT_S, "AT POWER-ON", C_WHITE, 1);
+        }
+    }
 }
+static uint8_t screen_lost;                        /* the updater drew over the app's screen: the app redraws its page */
+static int platform_screen_take(void) { int r = screen_lost; screen_lost = 0; return r; }
 static void ota_commit(const uint8_t *parm)
 {
     bootguard_clear(&bootguard);
@@ -350,8 +359,11 @@ static void platform_poll(void)
     ota_service();
     if (usb.ota_req) {
         usb.ota_req = 0;
-        if (flash_ok)
-            ota_session();                      /* returns only if nothing was committed */
+        if (flash_ok && ota_session()) {        /* returns only if nothing was committed: the reason stays up 3 s */
+            uint32_t t0 = fm1_ms;
+            while (fm1_ms - t0 < 3000u) { fm1_wdt_feed(); usb_retry(fm1_ms); }
+            screen_lost = 1;
+        }
     }
     if (usb.uboot_req) {
         fm1_audio_stop();

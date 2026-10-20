@@ -960,6 +960,7 @@ static uint8_t keys_cfg_seen[6];                       /* the KEYS settings the 
 static void app_loop(void)
 {
     uint32_t live;
+    if (platform_screen_take()) page_drawn = ~0u;     /* the updater drew over the page: draw it again */
     tone_set = set.rolloff;
     tune256 = ((int32_t)set.tune - 64) * 4 + ((int32_t)set.trans - 24) * 256;   /* MAIN: 1.56 cents a step, whole semitones */
     {                                                  /* the sensing set up when its six settings change, not every pass */

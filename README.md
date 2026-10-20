@@ -110,5 +110,7 @@ python3 tools/fm1_install.py build/cs1.fwsc
 ```
 
 The package identity is `FM-1_95N` (N = minor version). Installing any custom firmware is at your own risk:
-hold OCT- at power-on for the USB rescue; M-VAVE's updater or the installer's "Return to official V15" takes
-you back to stock.
+hold OCT- at power-on for the USB rescue; M-VAVE's updater or the Firmware Hub's "Back to official V15" takes
+you back to stock, and any firmware with Felucca's or M-VAVE's update loader installs over CS-1 (from 0.3.2;
+before, the official package was refused on a unit with an older flash head). tests/ota_test.c runs the update
+entry on a computer against a package.

@@ -22,3 +22,5 @@ for p in sorted(Path("build/host").glob("cs1-*.ppm")):
     p.unlink()
     print("screen ->", p.with_suffix(".png"))
 PYEOF
+$CC -O1 -Wno-unused-function -DDINGHY_HOST -Ifirmware/src -o build/host/ota_test tests/ota_test.c
+build/host/ota_test web/site/firmware/cs1.fwsc web/site/firmware/cs1.fwsc 0 > /dev/null && echo "ota: our package installs over our head"

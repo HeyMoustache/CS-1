@@ -59,8 +59,8 @@
     <li><b>It does not come back</b>: switch it off and on. If it then shows nothing, hold OCT− while switching on and install again.</li>
   </ul>
 
-  <h2 id="back">Going back</h2>
-  <p>M-VAVE's own updater restores the stock firmware, and so does the <a href="https://fm1.designburgapps.com">FM-1 Firmware Hub</a>'s "return to official" option, which also keeps a backup of the stock image for you. CS-1's user presets live in their own flash sector and survive a reinstall of CS-1.</p>
+  <h2 id="back">Going back, or on to another firmware</h2>
+  <p>Install the next firmware the way you installed this one: from the <a href="https://thefirmwarehub.com">FM-1 Firmware Hub</a>, from that firmware's own installer, or with M-VAVE's updater. CS-1 accepts a package that brings Felucca's update loader, which nearly every custom firmware does, and one that brings M-VAVE's own, which the official V15 and firmwares built on it do. The hub's "Back to official V15" works from CS-1 0.3.2 on; before that, CS-1 refused the official package on any unit whose first 16 KB of flash were older than V15's, and the screen only flickered. If CS-1 refuses a package now, the screen says why for three seconds. CS-1's user presets live in their own flash sector and survive a reinstall of CS-1.</p>
   <p>The command-line route still works too: <code>python3 tools/fm1_install.py cs1.fwsc</code> from the source tree, with Python 3, <code>mido</code> and <code>python-rtmidi</code>.</p>
 
   <footer><small>The installer is Felucca's <code>fm1ota.js</code> by Leo Kuroshita (Hügelton Instruments), GPL-3.0. CS-1 is GPL-3.0; M-VAVE and FM-1 are their owners' marks, CS-80 is Yamaha's.</small></footer>

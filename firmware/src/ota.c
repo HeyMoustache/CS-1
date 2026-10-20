@@ -214,6 +214,45 @@ static int ota_memeq(const uint8_t *a, const uint8_t *b, uint32_t n)
     return 1;
 }
 
+/* the chip key a flash head carries: the 32-byte blob at the start of its isd_config.ini entry (the SPL reads it to
+ * decrypt the app area). The head's own header and the entry's record must check; -1 if they do not, -2 unreadable.
+ * dev: the device's flash (ota_fread) rather than the package (ota_read at base). buf: 512 bytes of scratch */
+static int32_t ota_chipkey(const uint8_t *d)
+{
+    uint32_t i, s = 0, key = 0;
+    for (i = 0; i < 16u; i++)
+        s += d[i];
+    s &= 0xFFu;
+    s = s >= 0xE0u ? 0xAAu : s <= 0x10u ? 0x55u : s;
+    for (i = 0; i < 16u; i++)
+        if ((uint32_t)(d[16 + i] ^ d[15 - i]) < s)
+            key |= 1u << i;
+    return (int32_t)key;
+}
+static int32_t ota_head_key(int dev, uint32_t base, uint8_t *buf)
+{
+    uint32_t k, off = 0, size = 0;
+    if (dev ? ota_fread(0, buf, 256) : ota_read(base, buf, 256))
+        return -2;
+    ota_jl_enc(buf, 32);
+    if (ota_crc16(buf + 2, 30, 0) != ota_rd16(buf))
+        return -1;
+    for (k = 1; k < 8u && !size; k++) {               /* the JLFS entries after the header, 32 bytes each */
+        uint8_t *e = buf + 32u * k;
+        ota_jl_enc(e, 32);
+        if (ota_crc16(e + 2, 30, 0) != ota_rd16(e))
+            break;
+        if (ota_memeq(e + 16, (const uint8_t *)"isd_config", 10)) { off = ota_rd32(e + 4); size = ota_rd32(e + 8); }
+    }
+    if (!size || size < 34u || off < 32u || off + 34u > 0x4000u)
+        return -1;
+    if (dev ? ota_fread(off, buf, 34) : ota_read(base + off, buf, 34))
+        return -2;
+    if (ota_crc16(buf, 32, 0) != ota_rd16(buf + 32))
+        return -1;
+    return ota_chipkey(buf);
+}
+
 /* JLFS head "LOADER.BIN" in front of the staged loader (vm_update_defrag), written last */
 static int ota_stage_head(uint32_t len)
 {
@@ -291,14 +330,19 @@ static int ota_stage(void)                       /* steps 1..6; 0 = host said su
         own = ota_memeq(b + i, (const uint8_t *)"FELUCCA-LOADER-1", 16) && ota_rd32(b + 0x20 + 4) <= 0x14000u;
     if (!official && !own)
         return -7;
-    if (official) {                    /* the official loader writes the head: it must equal ours */
+    if (official) {                    /* the official loader writes the head as well as the app: the package's head must be
+                                        * one this unit boots from. Its chip key (what the SPL decrypts the app with) must be
+                                        * the unit's; the rest of the head (the SPL build, the settings text) is M-VAVE's to
+                                        * change, as every official update does. (Byte equality with the unit's head, as before,
+                                        * refused the official V15 on any unit whose head was older: no way back.) */
+        int32_t kp, kd;
         ota_show(2, 0);
-        for (i = 0; i < 0x4000u; i += 512u) {
-            if (ota_read(fl_off + i, b, 512) || ota_fread(i, mine, 512))
-                return -4;
-            if (!ota_memeq(b, mine, 512))
-                return -5;
-        }
+        kp = ota_head_key(0, fl_off, b);
+        kd = ota_head_key(1, 0, mine);
+        if (kp == -2 || kd == -2)
+            return -4;
+        if (kp < 0 || kd < 0 || kp != kd)
+            return -5;
     }
     /* 4. stage the package's loader: erase, body, verify, head last */
     ota_show(3, 0);
