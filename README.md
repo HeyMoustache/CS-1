@@ -32,7 +32,7 @@ VINTAGE on PERFORM lets each voice drift a few cents on its own, as the voice ca
 ## The sounds
 
 PRESETS (and program change) runs through these, then the 32 user slots; HOME + a key picks a tone for a channel,
-ALGO steps along its row on HOME, and turns a button's pages elsewhere. The classic ones are recipes after what is documented about the records (which presets,
+ALGO picks a category on HOME (PAD, STRINGS, BRASS, KEYS, BELLS, BASS, LEAD, FX, USER) for PRESETS to browse, and turns a button's pages elsewhere. The classic ones are recipes after what is documented about the records (which presets,
 the technique), not transcriptions; they pair a row I tone with a row II tone as the instrument does, and most
 carry the chorus, a touch of detune, an auto after touch curve and the plate. The last group is converted from
 CS-80 V factory presets on a computer with the plugin installed: `tools/converted.txt` lists them with our names,

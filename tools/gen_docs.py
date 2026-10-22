@@ -112,11 +112,11 @@ group = ""
 for line in block.splitlines():
     g = re.match(r"\s*/\* ---- (.*?) \*/", line)
     if g: group = g.group(1)
-    m = re.search(r'\.name = "([^"]+)",.*?\.tone = \{T_(\w+), T_(\w+)\}', line)
-    if m: sounds.append((group, m.group(1), m.group(2), m.group(3)))
+    m = re.search(r'\.name = "([^"]+)", \.cat = C_(\w+),.*?\.tone = \{T_(\w+), T_(\w+)\}', line)
+    if m: sounds.append((group, m.group(1), m.group(2), m.group(3), m.group(4)))
 for line in (SRC.parents[1] / "gen" / "cs1_sounds_conv.h").read_text().splitlines() if (SRC.parents[1] / "gen" / "cs1_sounds_conv.h").exists() else []:
-    m = re.search(r'\.name = "([^"]+)", \.tone = \{(\d+), (\d+)\}', line)
-    if m: sounds.append(("after CS-80 V presets, our names", m.group(1), "CONV", "CONV"))
+    m = re.search(r'\.name = "([^"]+)", \.cat = C_(\w+), \.tone = \{(\d+), (\d+)\}', line)
+    if m: sounds.append(("after CS-80 V presets, our names", m.group(1), m.group(2), "CONV", "CONV"))
 TONE = {"STR1": "String 1", "STR2": "String 2", "STR3": "String 3", "STR4": "String 4", "BRS1": "Brass 1", "BRS2": "Brass 2", "BRS3": "Brass 3", "FLUTE": "Flute",
         "EPIANO": "Electric Piano", "BASS": "Bass", "CLAV1": "Clavichord 1", "CLAV2": "Clavichord 2", "HARP1": "Harpsichord 1", "HARP2": "Harpsichord 2",
         "ORG1": "Organ 1", "ORG2": "Organ 2", "GTR1": "Guitar 1", "GTR2": "Guitar 2", "FNK1": "Funky 1", "FNK2": "Funky 2", "FNK3": "Funky 3", "FNK4": "Funky 4", "CONV": "its own panel"}
@@ -203,12 +203,12 @@ for title, params in pages:
         w(f'<tr><td class="k">KNOB {i + 1}</td><td class="k"><span class="cap {CAP[p["color"]]}"></span>{html.escape(p["name"])}</td><td>{html.escape(rng)}<br><small>{scope}</small></td><td>{html.escape(DESC.get((title, p["name"]), ""))}</td></tr>')
     w('</table>')
 w('<h2 id="sounds">The sounds</h2><p>In PRESETS order, which is also the program change number. Each pairs a row I tone with a row II tone, as the instrument does. The classic ones are recipes after what is documented about the records, not transcriptions: a guide to the character.</p>')
-w('<table><tr><th>#</th><th>Sound</th><th>Channel I</th><th>Channel II</th><th>Notes</th><th></th></tr>')
+w('<table><tr><th>#</th><th>Sound</th><th>Category</th><th>Channel I</th><th>Channel II</th><th>Notes</th><th></th></tr>')
 last = ""
-for i, (group, name, t1, t2) in enumerate(sounds):
+for i, (group, name, cat, t1, t2) in enumerate(sounds):
     if group != last:
-        w(f'<tr><th colspan="6">{html.escape(group)}</th></tr>'); last = group
-    w(f'<tr><td>{i}</td><td class="k">{html.escape(name)}</td><td>{TONE[t1]}</td><td>{TONE[t2]}</td><td>{html.escape(SOUND_NOTE.get(name, ""))}</td><td><a class="try" href="emu/?sound={i}">Try</a></td></tr>')
+        w(f'<tr><th colspan="7">{html.escape(group)}</th></tr>'); last = group
+    w(f'<tr><td>{i}</td><td class="k">{html.escape(name)}</td><td>{cat.title()}</td><td>{TONE[t1]}</td><td>{TONE[t2]}</td><td>{html.escape(SOUND_NOTE.get(name, ""))}</td><td><a class="try" href="emu/?sound={i}">Try</a></td></tr>')
 w('</table>')
 w('<footer><small>CS-1 is GPL-3.0; M-VAVE and FM-1 are their owners\' marks, CS-80 is Yamaha\'s. CS-1 is affiliated with none of them.</small></footer></main></body></html>')
 print("\n".join(out))

@@ -19,10 +19,11 @@
  *   REC         MIDI learn: REC, turn the panel knob to control, move the controller's knob: that CC is bound to
  *               that parameter (16 bindings, kept with the settings; the MIDI page's LEARNS clears them)
  *   KNOB 1..4   the four parameters of the page; SELECT turns the pages
- *   PRESETS     a sound (both channels' tones and the globals: SOUNDS below), then the user presets U01..U32
+ *   PRESETS     a sound (both channels' tones and the globals: SOUNDS below), then the user presets U01..U32,
+ *               within the category ALGO picks on HOME (ALL, PAD, STRINGS, BRASS, KEYS, BELLS, BASS, LEAD, FX, USER)
  *   HOME + key  the tone buttons: the lower eleven keys are row I's tones, the upper eleven row II's (the key LEDs
- *               show the lit ones while HOME is held); on HOME, ALGO steps along the selected channel's row
- *   ALGO        on any other page: the button's group of pages, either way (EDIT's seven, FX's seven, ...)
+ *               show the lit ones while HOME is held)
+ *   ALGO        on HOME the category PRESETS browses; on any other page the button's group of pages, either way
  *   EDIT        the next channel page (VCO, VCO 2, VCF, VCF EG, VCA EG, VCA, TOUCH); HOME the first; ENV F.ENV / VCA;
  *               LFO the sub oscillator / its pressure page / AUTO AT (a pressure curve every note plays by itself);
  *               FX the ring modulator / drive and EQ / chorus / delay / reverb / phaser pages; ARP the PLAY page
@@ -191,8 +192,12 @@ typedef struct { uint8_t ch, off, val; } tweak_t;      /* ch 0 / 1 (2: both), of
                                                         * 12 MUST end in TWEND: a zero-filled entry reads as channel I, feet, 16' */
 #define TW(c, f, v) {c, (uint8_t)offsetof(chan_patch_t, f), v}
 #define TWEND {3, 0, 0}
+/* the categories: every sound carries one; a user preset files itself by its panel (classify) */
+enum { C_ALL = 0, C_PAD, C_STRINGS, C_BRASS, C_KEYS, C_BELLS, C_BASS, C_LEAD, C_FX, C_USER, NCAT };
+static const char *const N_CAT[NCAT] = {"ALL", "PAD", "STRINGS", "BRASS", "KEYS", "BELLS", "BASS", "LEAD", "FX", "USER"};
 typedef struct {
     const char *name;
+    uint8_t cat;                                      /* its category (C_PAD ...) */
     uint8_t tone[2], feet1[2], level[2];              /* levels: 0 = 110 */
     uint8_t brill, reso, detune, mix;                 /* 0 = 64 (centre) */
     uint8_t porta, gliss, at_vco, at_brill, at_vcf, pbend;
@@ -220,151 +225,151 @@ enum { T_STR1 = 0, T_STR2, T_STR3, T_STR4, T_BRS1, T_BRS2, T_FLUTE, T_BRS3, T_EP
 #define F27 (FT_27 + 1)
 static const sound_t SOUNDS[] = {
     /* ---- Vangelis */
-    {.name = "BLADE BRASS", .rv_mix = 56, .tone = {T_BRS1, T_BRS2}, .level = {115, 115}, .brill = 60, .reso = 70, .detune = 70,
+    {.name = "BLADE BRASS", .cat = C_BRASS, .rv_mix = 56, .tone = {T_BRS1, T_BRS2}, .level = {115, 115}, .brill = 60, .reso = 70, .detune = 70,
      .porta = 18, .at_vco = 30, .at_brill = 90, .cho_mode = CHO_CHORUS, .cho_spd = 22, .cho_depth = 70, .v_a = 62,
      .aat_delay = 50, .aat_rise = 70, .aat_level = 100, .rv_size = 100, .tw = {TWEND}},
-    {.name = "BR BLUES", .rv_mix = 68, .tone = {T_STR3, T_BRS3}, .feet1 = {F4, F8}, .level = {110, 95}, .brill = 70, .reso = 68, .detune = 72,
+    {.name = "BR BLUES", .cat = C_BRASS, .rv_mix = 68, .tone = {T_STR3, T_BRS3}, .feet1 = {F4, F8}, .level = {110, 95}, .brill = 70, .reso = 68, .detune = 72,
      .porta = 30, .at_vco = 34, .at_brill = 70, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 75, .v_a = 40, .v_r = 80,
      .aat_delay = 45, .aat_rise = 65, .aat_level = 110, .aat_fall = 60, .rv_size = 115, .rv_shim = 25,
      .dly_time = 84, .dly_fb = 45, .dly_mix = 30, .dly_tape = 50, .dly_ping = 1, .dly_sync = 6, .tw = {TW(0, lp_cut, 100), TW(1, lp_cut, 90), TWEND}},
-    {.name = "BR FLUTE", .rv_mix = 56, .tone = {T_FLUTE, T_ORG2}, .feet1 = {F8, F16}, .level = {115, 60}, .brill = 60, .detune = 68,
+    {.name = "BR FLUTE", .cat = C_BRASS, .rv_mix = 56, .tone = {T_FLUTE, T_ORG2}, .feet1 = {F8, F16}, .level = {115, 60}, .brill = 60, .detune = 68,
      .porta = 60, .at_vco = 22, .at_brill = 40, .cho_mode = CHO_CHORUS, .cho_spd = 16, .cho_depth = 70, .v_a = 48,
      .aat_delay = 60, .aat_rise = 75, .aat_level = 70, .aat_fall = 50, .rv_size = 100,
      .dly_time = 90, .dly_fb = 50, .dly_mix = 45, .dly_tape = 50, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
-    {.name = "BR STRINGS", .rv_mix = 68, .ph_rate = 20, .ph_depth = 60, .ph_fb = 30, .ph_mix = 40, .tone = {T_STR1, T_STR2}, .feet1 = {F8, F16}, .level = {115, 90}, .brill = 56, .reso = 66, .detune = 72,
+    {.name = "BR STRINGS", .cat = C_STRINGS, .rv_mix = 68, .ph_rate = 20, .ph_depth = 60, .ph_fb = 30, .ph_mix = 40, .tone = {T_STR1, T_STR2}, .feet1 = {F8, F16}, .level = {115, 90}, .brill = 56, .reso = 66, .detune = 72,
      .porta = 22, .at_vco = 19, .at_brill = 50, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 85, .v_a = 85, .v_r = 95,
      .aat_delay = 55, .aat_rise = 80, .aat_level = 90, .aat_fall = 60, .rv_size = 118, .rv_shim = 30, .tw = {TWEND}},
-    {.name = "CHARIOTS", .rv_mix = 44, .tone = {T_BRS1, T_BRS3}, .level = {115, 105}, .brill = 72, .reso = 66, .detune = 70,
+    {.name = "CHARIOTS", .cat = C_BRASS, .rv_mix = 44, .tone = {T_BRS1, T_BRS3}, .level = {115, 105}, .brill = 72, .reso = 66, .detune = 70,
      .porta = 10, .at_vco = 32, .at_brill = 80, .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 55, .v_a = 30,
      .aat_delay = 40, .aat_rise = 55, .aat_level = 95, .rv_size = 95,
      .dly_time = 96, .dly_fb = 55, .dly_mix = 50, .dly_tape = 50, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
-    {.name = "UNKNOWN MAN", .rv_mix = 52, .tone = {T_BRS1, T_STR2}, .level = {115, 80}, .brill = 66, .reso = 64, .detune = 69,
+    {.name = "UNKNOWN MAN", .cat = C_PAD, .rv_mix = 52, .tone = {T_BRS1, T_STR2}, .level = {115, 80}, .brill = 66, .reso = 64, .detune = 69,
      .porta = 26, .at_vco = 36, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 60, .v_a = 36,
      .aat_delay = 40, .aat_rise = 60, .aat_level = 100, .rv_size = 100, .dly_time = 100, .dly_fb = 40, .dly_mix = 35, .dly_tape = 50, .dly_sync = 3, .tw = {TWEND}},
     /* Syntorial's Blade Runner brass: two 50 % pulses an octave apart, 6 cents off, PWM at ~4 Hz, a 650 ms filter
      * swell that takes 10 s to fall, the amplifier at 250 ms / 1.9 s / 40 % / 750 ms, a big reverb at 10 % */
-    {.name = "BR BRASS 2", .rv_mix = 28, .tone = {T_BRS1, T_BRS2}, .feet1 = {F8, F4}, .level = {115, 85}, .brill = 64, .reso = 64, .detune = 56,
+    {.name = "BR BRASS 2", .cat = C_BRASS, .rv_mix = 28, .tone = {T_BRS1, T_BRS2}, .feet1 = {F8, F4}, .level = {115, 85}, .brill = 64, .reso = 64, .detune = 56,
      .at_vco = 26, .at_brill = 70, .rv_size = 100, .aat_delay = 50, .aat_rise = 70, .aat_level = 80,
      .tw = {TW(2, wave, W_PULSE), TW(2, pw, 0), TW(2, pwm, 100), TW(2, pwm_spd, 78), TW(2, lp_cut, 95), TW(2, lp_res, 19),
             TW(2, f_il, 64), TW(2, f_al, 82), TW(2, f_a, 88), TW(2, f_d, 124), TW(2, f_r, 124), TW(2, v_a, 75)}},
     /* the brass swell as MusicTech builds it: two saws 60 / 40 a couple of cents apart, the filter envelope a third
      * of the range over a second, long decay and release; a tape delay with high feedback and a 10 s reverb */
-    {.name = "BRASS SWELL", .rv_mix = 48, .tone = {T_BRS1, T_BRS2}, .level = {118, 95}, .brill = 60, .reso = 62, .detune = 67,
+    {.name = "BRASS SWELL", .cat = C_BRASS, .rv_mix = 48, .tone = {T_BRS1, T_BRS2}, .level = {118, 95}, .brill = 60, .reso = 62, .detune = 67,
      .at_vco = 19, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 40, .v_a = 55, .v_r = 100,
      .aat_delay = 40, .aat_rise = 80, .aat_level = 90, .rv_size = 100,
      .dly_time = 95, .dly_fb = 70, .dly_mix = 35, .dly_tape = 50, .dly_ping = 1,
      .dly_sync = 4, .tw = {TW(2, f_il, 64), TW(2, f_al, 104), TW(2, f_a, 94), TW(2, f_d, 120), TW(2, f_r, 120), TW(2, v_s, 120), TWEND}},
     /* Blade Runner Blues as a forum player had it on the Arturia: Brass 1 + 2 with the performance side up */
-    {.name = "BR BLUES 2", .rv_mix = 68, .tone = {T_BRS1, T_BRS2}, .level = {115, 110}, .brill = 66, .reso = 66, .detune = 70,
+    {.name = "BR BLUES 2", .cat = C_BRASS, .rv_mix = 68, .tone = {T_BRS1, T_BRS2}, .level = {115, 110}, .brill = 66, .reso = 66, .detune = 70,
      .porta = 24, .at_vco = 34, .at_brill = 110, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 70, .v_a = 36, .v_r = 85,
      .aat_delay = 40, .aat_rise = 60, .aat_level = 115, .aat_fall = 60, .rv_size = 115,
      .dly_time = 84, .dly_fb = 45, .dly_mix = 30, .dly_tape = 50, .dly_ping = 1, .dly_sync = 6, .tw = {TWEND}},
     /* the End Titles' sequenced bass: two saws an octave apart, the filter under an envelope; no chorus */
-    {.name = "END TITLES", .rv_mix = 20, .tone = {T_BRS1, T_BRS2}, .feet1 = {F16, F8}, .level = {118, 100}, .brill = 60, .reso = 72, .detune = 66,
+    {.name = "END TITLES", .cat = C_BASS, .rv_mix = 20, .tone = {T_BRS1, T_BRS2}, .feet1 = {F16, F8}, .level = {118, 100}, .brill = 60, .reso = 72, .detune = 66,
      .rv_size = 70, .dly_time = 80, .dly_fb = 40, .dly_mix = 25, .dly_tape = 50, .dly_ping = 1,
      .dly_sync = 4, .tw = {TW(2, f_il, 64), TW(2, f_al, 100), TW(2, f_a, 0), TW(2, f_d, 70), TW(2, v_a, 0), TW(2, v_r, 40), TWEND}},
-    {.name = "CHIMES", .rv_mix = 60, .tone = {T_FLUTE, T_BASS}, .feet1 = {F4, F4}, .level = {110, 90}, .brill = 70,
+    {.name = "CHIMES", .cat = C_BELLS, .rv_mix = 60, .tone = {T_FLUTE, T_BASS}, .feet1 = {F4, F4}, .level = {110, 90}, .brill = 70,
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 40, .rm_mod = 115, .rm_spd = 78, .rm_depth = 60, .rm_d = 85,
      .rv_size = 105, .rv_shim = 30, .tw = {TWEND}},
     /* ---- Toto, Thriller */
-    {.name = "AFRICA", .rv_mix = 32, .tone = {T_STR1, T_STR4}, .level = {120, 80}, .brill = 56, .reso = 76, .mix = 48,
+    {.name = "AFRICA", .cat = C_STRINGS, .rv_mix = 32, .tone = {T_STR1, T_STR4}, .level = {120, 80}, .brill = 56, .reso = 76, .mix = 48,
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 40, .rv_size = 80, .tw = {TWEND}},
-    {.name = "AFRICA 2", .rv_mix = 20, .tone = {T_STR3, T_STR4}, .level = {115, 110}, .brill = 60, .reso = 64, .detune = 66,
+    {.name = "AFRICA 2", .cat = C_STRINGS, .rv_mix = 20, .tone = {T_STR3, T_STR4}, .level = {115, 110}, .brill = 60, .reso = 64, .detune = 66,
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 50, .rv_size = 70,
      .tw = {TW(2, lp_cut, 70), TW(2, f_al, 76), TW(2, f_a, 59), TW(2, f_d, 116), TW(2, v_d, 124), TW(2, v_s, 0), TWEND}},
-    {.name = "ROSANNA", .rv_mix = 28, .tone = {T_BRS1, T_BRS2}, .level = {115, 110}, .brill = 62, .reso = 68, .detune = 67,
+    {.name = "ROSANNA", .cat = C_BRASS, .rv_mix = 28, .tone = {T_BRS1, T_BRS2}, .level = {115, 110}, .brill = 62, .reso = 68, .detune = 67,
      .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 50, .v_a = 20, .rv_size = 70, .tw = {TWEND}},
-    {.name = "HUMAN NATURE", .rv_mix = 32, .tone = {T_STR1, T_BRS2}, .level = {110, 110}, .brill = 58, .reso = 80, .detune = 66,
+    {.name = "HUMAN NATURE", .cat = C_PAD, .rv_mix = 32, .tone = {T_STR1, T_BRS2}, .level = {110, 110}, .brill = 58, .reso = 80, .detune = 66,
      .porta = 22, .gliss = 1, .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 75, .rv_size = 85,
      .tw = {TW(0, v_r, 95), TWEND}},
-    {.name = "BILLIE JEAN", .rv_mix = 32, .tone = {T_STR1, T_BRS2}, .level = {110, 110}, .brill = 58, .reso = 64, .detune = 66,
+    {.name = "BILLIE JEAN", .cat = C_STRINGS, .rv_mix = 32, .tone = {T_STR1, T_BRS2}, .level = {110, 110}, .brill = 58, .reso = 64, .detune = 66,
      .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 75, .rv_size = 85, .tw = {TW(0, v_r, 90), TWEND}},
     /* Syntorial's Billie Jean keys recipe: a narrow pulse, PWM at a quarter note, a short filter blip, fast chorus */
-    {.name = "BILLIE KEYS", .rv_mix = 32, .tone = {T_HARP1, T_HARP2}, .level = {118, 0}, .mix = 0, .brill = 62, .reso = 60,
+    {.name = "BILLIE KEYS", .cat = C_KEYS, .rv_mix = 32, .tone = {T_HARP1, T_HARP2}, .level = {118, 0}, .mix = 0, .brill = 62, .reso = 60,
      .cho_mode = CHO_CHORUS, .cho_spd = 60, .cho_depth = 45, .rv_size = 75,
      .tw = {TW(0, pw, 113), TW(0, pwm, 76), TW(0, pwm_spd, 63), TW(0, lp_cut, 83), TW(0, f_al, 70), TW(0, f_d, 83), TWEND}},
     /* ---- the eighties */
-    {.name = "BORN USA", .rv_mix = 36, .tone = {T_BRS1, T_STR2}, .level = {118, 100}, .brill = 74, .reso = 62, .detune = 68,
+    {.name = "BORN USA", .cat = C_BRASS, .rv_mix = 36, .tone = {T_BRS1, T_STR2}, .level = {118, 100}, .brill = 74, .reso = 62, .detune = 68,
      .cho_mode = CHO_CHORUS, .cho_spd = 26, .cho_depth = 45, .v_a = 12, .rv_size = 90, .tw = {TW(1, lp_cut, 100), TWEND}},
-    {.name = "XMAS BASS", .rv_mix = 16, .tone = {T_STR1, T_BASS}, .level = {0, 120}, .mix = 127, .brill = 84, .reso = 118,
+    {.name = "XMAS BASS", .cat = C_BASS, .rv_mix = 16, .tone = {T_STR1, T_BASS}, .level = {0, 120}, .mix = 127, .brill = 84, .reso = 118,
      .lfo_wave = LW_SAWDN, .lfo_spd = 70, .lfo_vcf = 127, .rv_size = 50, .tw = {TW(1, v_r, 40), TWEND}},
-    {.name = "WHO BASS", .rv_mix = 20, .tone = {T_BASS, T_BASS}, .feet1 = {F16, F8}, .level = {120, 90}, .brill = 70, .reso = 90, .detune = 66,
+    {.name = "WHO BASS", .cat = C_BASS, .rv_mix = 20, .tone = {T_BASS, T_BASS}, .feet1 = {F16, F8}, .level = {120, 90}, .brill = 70, .reso = 90, .detune = 66,
      .rv_size = 60, .tw = {TW(2, lp_res, 90), TW(2, f_al, 100), TW(2, f_d, 60), TWEND}},
-    {.name = "BABOOSHKA", .rv_mix = 32, .tone = {T_FLUTE, T_ORG2}, .level = {118, 55}, .brill = 66, .detune = 67,
+    {.name = "BABOOSHKA", .cat = C_KEYS, .rv_mix = 32, .tone = {T_FLUTE, T_ORG2}, .level = {118, 55}, .brill = 66, .detune = 67,
      .porta = 40, .at_vco = 26, .at_brill = 30, .lfo_spd = 66, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 50,
      .v_a = 20, .aat_delay = 45, .aat_rise = 60, .aat_level = 80, .rv_size = 80, .dly_time = 80, .dly_fb = 35, .dly_mix = 25, .dly_tape = 50, .dly_sync = 3, .tw = {TWEND}},
-    {.name = "DUCHESS", .rv_mix = 48, .tone = {T_STR3, T_STR4}, .level = {115, 110}, .brill = 60, .reso = 64, .detune = 70,
+    {.name = "DUCHESS", .cat = C_PAD, .rv_mix = 48, .tone = {T_STR3, T_STR4}, .level = {115, 110}, .brill = 60, .reso = 64, .detune = 70,
      .porta = 45, .cho_mode = CHO_CHORUS, .cho_spd = 18, .cho_depth = 80, .v_a = 70, .v_r = 85, .rv_size = 100, .tw = {TWEND}},
-    {.name = "TURN IT ON", .rv_mix = 24, .tone = {T_BRS1, T_BRS3}, .level = {118, 110}, .brill = 70, .reso = 70, .detune = 68,
+    {.name = "TURN IT ON", .cat = C_BRASS, .rv_mix = 24, .tone = {T_BRS1, T_BRS3}, .level = {118, 110}, .brill = 70, .reso = 70, .detune = 68,
      .cho_mode = CHO_CHORUS, .cho_spd = 26, .cho_depth = 45, .v_a = 8, .rv_size = 70, .tw = {TW(2, f_a, 20), TWEND}},
-    {.name = "TIME STRINGS", .rv_mix = 52, .ph_rate = 28, .ph_depth = 70, .ph_fb = 35, .ph_mix = 55, .tone = {T_STR1, T_STR2}, .level = {115, 115}, .brill = 58, .reso = 64, .detune = 71,
+    {.name = "TIME STRINGS", .cat = C_STRINGS, .rv_mix = 52, .ph_rate = 28, .ph_depth = 70, .ph_fb = 35, .ph_mix = 55, .tone = {T_STR1, T_STR2}, .level = {115, 115}, .brill = 58, .reso = 64, .detune = 71,
      .cho_mode = CHO_CHORUS, .cho_spd = 16, .cho_depth = 90, .v_a = 80, .v_r = 100, .rv_size = 110, .tw = {TWEND}},
-    {.name = "VIENNA", .rv_mix = 56, .ph_rate = 30, .ph_depth = 50, .ph_fb = 20, .ph_mix = 35, .tone = {T_STR1, T_BRS3}, .level = {115, 95}, .brill = 54, .reso = 72, .detune = 69,
+    {.name = "VIENNA", .cat = C_STRINGS, .rv_mix = 56, .ph_rate = 30, .ph_depth = 50, .ph_fb = 20, .ph_mix = 35, .tone = {T_STR1, T_BRS3}, .level = {115, 95}, .brill = 54, .reso = 72, .detune = 69,
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 65, .v_a = 55, .v_r = 90, .rv_size = 110,
      .dly_time = 100, .dly_fb = 50, .dly_mix = 35, .dly_tape = 50, .dly_ping = 1, .dly_sync = 4, .tw = {TWEND}},
-    {.name = "OXYGENE", .rv_mix = 64, .tone = {T_STR3, T_STR4}, .feet1 = {F8, F16}, .level = {115, 100}, .brill = 56, .detune = 72,
+    {.name = "OXYGENE", .cat = C_PAD, .rv_mix = 64, .tone = {T_STR3, T_STR4}, .feet1 = {F8, F16}, .level = {115, 100}, .brill = 56, .detune = 72,
      .lfo_spd = 50, .lfo_vcf = 100, .cho_mode = CHO_CHORUS, .cho_spd = 14, .cho_depth = 95, .v_a = 90, .v_r = 110,
      .rv_size = 120, .rv_shim = 20, .tw = {TW(0, pwm, 60), TW(0, pwm_spd, 36), TW(0, wave, W_BOTH), TWEND}},
-    {.name = "ENO WASH", .rv_mix = 76, .ph_rate = 12, .ph_depth = 90, .ph_fb = 50, .ph_mix = 50, .tone = {T_STR3, T_ORG2}, .feet1 = {F8, F16}, .level = {110, 80}, .brill = 48, .detune = 70,
+    {.name = "ENO WASH", .cat = C_PAD, .rv_mix = 76, .ph_rate = 12, .ph_depth = 90, .ph_fb = 50, .ph_mix = 50, .tone = {T_STR3, T_ORG2}, .feet1 = {F8, F16}, .level = {110, 80}, .brill = 48, .detune = 70,
      .cho_mode = CHO_CHORUS, .cho_spd = 12, .cho_depth = 85, .v_a = 110, .v_r = 115, .rv_size = 125, .rv_damp = 70,
      .rv_shim = 35, .tw = {TWEND}},
-    {.name = "WALKING", .rv_mix = 28, .tone = {T_STR3, T_FNK2}, .level = {110, 110}, .brill = 72, .reso = 84, .detune = 68,
+    {.name = "WALKING", .cat = C_KEYS, .rv_mix = 28, .tone = {T_STR3, T_FNK2}, .level = {110, 110}, .brill = 72, .reso = 84, .detune = 68,
      .cho_mode = CHO_CHORUS, .cho_spd = 44, .cho_depth = 95, .v_a = 15, .rv_size = 75,
      .tw = {TW(1, wave, W_PULSE), TW(1, pw, 40), TW(1, pwm, 70), TW(1, hp_cut, 55), TW(0, hp_cut, 50), TWEND}},
-    {.name = "4001 PLUCK", .rv_mix = 36, .tone = {T_STR3, T_STR4}, .level = {118, 0}, .mix = 0, .brill = 58, .reso = 100,
+    {.name = "4001 PLUCK", .cat = C_KEYS, .rv_mix = 36, .tone = {T_STR3, T_STR4}, .level = {118, 0}, .mix = 0, .brill = 58, .reso = 100,
      .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 50, .v_r = 100, .rv_size = 90,
      .tw = {TW(0, hp_cut, 55), TW(0, lp_cut, 35), TW(0, lp_res, 120), TW(0, f_al, 110), TW(0, f_d, 45), TW(0, f_a, 0), TWEND}},
-    {.name = "4001 STRINGS", .rv_mix = 40, .ph_rate = 22, .ph_depth = 60, .ph_fb = 30, .ph_mix = 45, .tone = {T_STR1, T_STR2}, .feet1 = {F8, F16}, .level = {115, 110}, .brill = 110, .reso = 64, .detune = 68,
+    {.name = "4001 STRINGS", .cat = C_STRINGS, .rv_mix = 40, .ph_rate = 22, .ph_depth = 60, .ph_fb = 30, .ph_mix = 45, .tone = {T_STR1, T_STR2}, .feet1 = {F8, F16}, .level = {115, 110}, .brill = 110, .reso = 64, .detune = 68,
      .lfo_spd = 78, .lfo_vco = 20, .cho_mode = CHO_CHORUS, .cho_spd = 22, .cho_depth = 60, .v_a = 64, .v_r = 90,
      .rv_size = 95, .tw = {TW(2, lp_cut, 127), TW(2, hp_cut, 0), TWEND}},
-    {.name = "LONG BRASS", .rv_mix = 60, .tone = {T_BRS2, T_BRS3}, .level = {112, 112}, .brill = 60, .reso = 66, .detune = 70,
+    {.name = "LONG BRASS", .cat = C_BRASS, .rv_mix = 60, .tone = {T_BRS2, T_BRS3}, .level = {112, 112}, .brill = 60, .reso = 66, .detune = 70,
      .at_vco = 22, .at_brill = 100, .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 60, .v_a = 95, .v_r = 90,
      .aat_delay = 70, .aat_rise = 100, .aat_level = 110, .aat_fall = 70, .rv_size = 110,
      .dly_time = 104, .dly_fb = 55, .dly_mix = 40, .dly_tape = 50, .dly_ping = 1, .dly_sync = 5, .tw = {TWEND}},
-    {.name = "SHRIEK LEAD", .rv_mix = 48, .tone = {T_FNK3, T_FNK1}, .feet1 = {F2, F4}, .level = {115, 90}, .brill = 80, .reso = 96, .detune = 70,
+    {.name = "SHRIEK LEAD", .cat = C_LEAD, .rv_mix = 48, .tone = {T_FNK3, T_FNK1}, .feet1 = {F2, F4}, .level = {115, 90}, .brill = 80, .reso = 96, .detune = 70,
      .porta = 20, .at_vco = 34, .at_brill = 60, .cho_mode = CHO_CHORUS, .cho_spd = 30, .cho_depth = 50,
      .rv_size = 100, .dly_time = 90, .dly_fb = 50, .dly_mix = 35, .dly_tape = 50, .tw = {TWEND}},
-    {.name = "SQUELCH BASS", .rv_mix = 12, .tone = {T_FNK1, T_BASS}, .feet1 = {F16, F16}, .level = {110, 110}, .brill = 60, .reso = 100, .detune = 66,
+    {.name = "SQUELCH BASS", .cat = C_BASS, .rv_mix = 12, .tone = {T_FNK1, T_BASS}, .feet1 = {F16, F16}, .level = {110, 110}, .brill = 60, .reso = 100, .detune = 66,
      .rv_size = 50, .tw = {TW(2, f_a, 0), TW(2, f_d, 50), TW(2, v_r, 35), TWEND}},
     /* ---- the manual's own examples and the plain pairs */
-    {.name = "TRUMPET", .rv_mix = 28, .tone = {T_BRS1, T_BRS2}, .level = {115, 60}, .brill = 70, .reso = 64, .detune = 66,
+    {.name = "TRUMPET", .cat = C_BRASS, .rv_mix = 28, .tone = {T_BRS1, T_BRS2}, .level = {115, 60}, .brill = 70, .reso = 64, .detune = 66,
      .lfo_spd = 64, .lfo_vco = 30, .v_a = 25, .v_r = 45, .rv_size = 75,
      .tw = {TW(0, f_il, 16), TW(0, f_al, 112), TW(0, lp_cut, 80), TWEND}},
-    {.name = "CLARINET", .rv_mix = 28, .tone = {T_CLAV1, T_EPIANO}, .level = {118, 0}, .mix = 0, .brill = 58, .lfo_spd = 62, .lfo_vco = 22,
+    {.name = "CLARINET", .cat = C_BRASS, .rv_mix = 28, .tone = {T_CLAV1, T_EPIANO}, .level = {118, 0}, .mix = 0, .brill = 58, .lfo_spd = 62, .lfo_vco = 22,
      .v_a = 40, .v_r = 50, .rv_size = 80,
      .tw = {TW(0, pw, 0), TW(0, pwm, 0), TW(0, lp_cut, 72), TW(0, f_al, 76), TW(0, f_d, 70), TW(0, lp_res, 20), TWEND}},
-    {.name = "OBOE", .rv_mix = 28, .tone = {T_HARP1, T_HARP2}, .level = {118, 0}, .mix = 0, .brill = 64, .lfo_spd = 64, .lfo_vco = 20,
+    {.name = "OBOE", .cat = C_BRASS, .rv_mix = 28, .tone = {T_HARP1, T_HARP2}, .level = {118, 0}, .mix = 0, .brill = 64, .lfo_spd = 64, .lfo_vco = 20,
      .v_a = 35, .v_r = 50, .rv_size = 80,
      .tw = {TW(0, pw, 113), TW(0, hp_cut, 60), TW(0, lp_cut, 90), TW(0, f_al, 84), TW(0, f_d, 65), TW(0, v_s, 110), TWEND}},
-    {.name = "TIMPANI", .rv_mix = 36, .tone = {T_GTR1, T_BASS}, .feet1 = {F8, F16}, .level = {100, 118}, .brill = 56, .reso = 76, .detune = 64,
+    {.name = "TIMPANI", .cat = C_FX, .rv_mix = 36, .tone = {T_GTR1, T_BASS}, .feet1 = {F8, F16}, .level = {100, 118}, .brill = 56, .reso = 76, .detune = 64,
      .lfo_spd = 40, .rv_size = 85,
      .tw = {TW(0, wave, W_SAW), TW(0, noise, 120), TW(0, vcf_lv, 100), TW(0, f_r, 60), TW(1, sine, 100), TW(1, pwm, 40), TWEND}},
-    {.name = "STRINGS 1+2", .rv_mix = 28, .tone = {T_STR1, T_STR2}, .cho_mode = CHO_OFF, .rv_size = 80, .tw = {TWEND}},
-    {.name = "BRASS 1+2", .rv_mix = 20, .tone = {T_BRS1, T_BRS2}, .cho_mode = CHO_OFF, .rv_size = 60, .tw = {TWEND}},
-    {.name = "FLUTE+BASS", .rv_mix = 24, .tone = {T_FLUTE, T_BASS}, .level = {110, 100}, .cho_mode = CHO_OFF, .rv_size = 70, .tw = {TWEND}},
-    {.name = "ORGANS", .rv_mix = 32, .ph_rate = 60, .ph_depth = 50, .ph_fb = 20, .ph_mix = 60, .tone = {T_ORG1, T_ORG2}, .feet1 = {F8, F4}, .level = {110, 100}, .brill = 72, .reso = 76,
+    {.name = "STRINGS 1+2", .cat = C_STRINGS, .rv_mix = 28, .tone = {T_STR1, T_STR2}, .cho_mode = CHO_OFF, .rv_size = 80, .tw = {TWEND}},
+    {.name = "BRASS 1+2", .cat = C_BRASS, .rv_mix = 20, .tone = {T_BRS1, T_BRS2}, .cho_mode = CHO_OFF, .rv_size = 60, .tw = {TWEND}},
+    {.name = "FLUTE+BASS", .cat = C_KEYS, .rv_mix = 24, .tone = {T_FLUTE, T_BASS}, .level = {110, 100}, .cho_mode = CHO_OFF, .rv_size = 70, .tw = {TWEND}},
+    {.name = "ORGANS", .cat = C_KEYS, .rv_mix = 32, .ph_rate = 60, .ph_depth = 50, .ph_fb = 20, .ph_mix = 60, .tone = {T_ORG1, T_ORG2}, .feet1 = {F8, F4}, .level = {110, 100}, .brill = 72, .reso = 76,
      .cho_mode = CHO_CHORUS, .cho_spd = 40, .cho_depth = 60, .rv_size = 90, .tw = {TWEND}},
-    {.name = "CLAVS", .rv_mix = 12, .tone = {T_CLAV1, T_CLAV2}, .level = {110, 100}, .cho_mode = CHO_OFF, .rv_size = 50, .tw = {TWEND}},
-    {.name = "HARPSI", .rv_mix = 20, .tone = {T_HARP1, T_HARP2}, .cho_mode = CHO_OFF, .rv_size = 60, .tw = {TWEND}},
-    {.name = "E.PIANO", .rv_mix = 24, .tone = {T_EPIANO, T_STR4}, .level = {120, 50}, .cho_mode = CHO_CHORUS, .cho_spd = 30, .cho_depth = 50,
+    {.name = "CLAVS", .cat = C_KEYS, .rv_mix = 12, .tone = {T_CLAV1, T_CLAV2}, .level = {110, 100}, .cho_mode = CHO_OFF, .rv_size = 50, .tw = {TWEND}},
+    {.name = "HARPSI", .cat = C_KEYS, .rv_mix = 20, .tone = {T_HARP1, T_HARP2}, .cho_mode = CHO_OFF, .rv_size = 60, .tw = {TWEND}},
+    {.name = "E.PIANO", .cat = C_KEYS, .rv_mix = 24, .tone = {T_EPIANO, T_STR4}, .level = {120, 50}, .cho_mode = CHO_CHORUS, .cho_spd = 30, .cho_depth = 50,
      .rv_size = 70, .dly_mix = 20, .dly_tape = 50, .tw = {TWEND}},
-    {.name = "FUNKY 1+2", .rv_mix = 12, .tone = {T_FNK1, T_FNK2}, .cho_mode = CHO_OFF, .rv_size = 50, .tw = {TWEND}},
+    {.name = "FUNKY 1+2", .cat = C_KEYS, .rv_mix = 12, .tone = {T_FNK1, T_FNK2}, .cho_mode = CHO_OFF, .rv_size = 50, .tw = {TWEND}},
     /* ---- with the effects */
-    {.name = "TAPE PAD", .tone = {T_STR1, T_STR4}, .level = {110, 100}, .brill = 58, .reso = 60, .detune = 72, .cho_mode = CHO_CHORUS, .cho_spd = 18,
+    {.name = "TAPE PAD", .cat = C_PAD, .tone = {T_STR1, T_STR4}, .level = {110, 100}, .brill = 58, .reso = 60, .detune = 72, .cho_mode = CHO_CHORUS, .cho_spd = 18,
      .cho_depth = 70, .v_a = 85, .v_r = 95, .aat_delay = 60, .aat_rise = 80, .aat_level = 70, .rv_mix = 55, .rv_size = 105, .rv_damp = 60,
      .dly_time = 95, .dly_fb = 60, .dly_mix = 40, .dly_ping = 1, .dly_sync = 4, .dly_tape = 90, .ph_rate = 15, .ph_depth = 60, .ph_fb = 25, .ph_mix = 35,
      .vintage = 50, .tw = {TWEND}},
-    {.name = "SHIMMER CHOIR", .tone = {T_FLUTE, T_STR4}, .feet1 = {F8, F4}, .level = {115, 95}, .brill = 62, .cho_mode = CHO_CHORUS, .cho_spd = 22,
+    {.name = "SHIMMER CHOIR", .cat = C_PAD, .tone = {T_FLUTE, T_STR4}, .feet1 = {F8, F4}, .level = {115, 95}, .brill = 62, .cho_mode = CHO_CHORUS, .cho_spd = 22,
      .cho_depth = 65, .v_a = 100, .v_r = 110, .aat_delay = 70, .aat_rise = 90, .aat_level = 60, .rv_mix = 85, .rv_size = 122, .rv_damp = 35, .rv_shim = 65,
      .vintage = 40, .tw = {TW(2, sine, 60), TWEND}},
-    {.name = "PHASE STRINGS", .tone = {T_STR1, T_STR2}, .detune = 70, .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 60, .v_a = 50, .v_r = 80,
+    {.name = "PHASE STRINGS", .cat = C_STRINGS, .tone = {T_STR1, T_STR2}, .detune = 70, .cho_mode = CHO_CHORUS, .cho_spd = 24, .cho_depth = 60, .v_a = 50, .v_r = 80,
      .rv_mix = 40, .rv_size = 90, .ph_rate = 32, .ph_depth = 95, .ph_fb = 70, .ph_mix = 100, .vintage = 35, .tw = {TWEND}},
-    {.name = "ECHO KEYS", .tone = {T_EPIANO, T_CLAV2}, .mix = 50, .brill = 66, .cho_mode = CHO_CHORUS, .cho_spd = 40, .cho_depth = 45, .v_r = 60,
+    {.name = "ECHO KEYS", .cat = C_KEYS, .tone = {T_EPIANO, T_CLAV2}, .mix = 50, .brill = 66, .cho_mode = CHO_CHORUS, .cho_spd = 40, .cho_depth = 45, .v_r = 60,
      .rv_mix = 30, .rv_size = 75, .dly_time = 88, .dly_fb = 55, .dly_mix = 45, .dly_ping = 1, .dly_sync = 5, .dly_tape = 75, .tw = {TWEND}},
-    {.name = "TAPE BRASS", .tone = {T_BRS1, T_BRS3}, .level = {115, 105}, .brill = 60, .reso = 66, .detune = 71, .porta = 20, .at_vco = 30, .at_brill = 80,
+    {.name = "TAPE BRASS", .cat = C_BRASS, .tone = {T_BRS1, T_BRS3}, .level = {115, 105}, .brill = 60, .reso = 66, .detune = 71, .porta = 20, .at_vco = 30, .at_brill = 80,
      .cho_mode = CHO_CHORUS, .cho_spd = 20, .cho_depth = 70, .v_a = 60, .aat_delay = 45, .aat_rise = 70, .aat_level = 95, .rv_mix = 50, .rv_size = 100,
      .dly_time = 100, .dly_fb = 50, .dly_mix = 40, .dly_ping = 1, .dly_sync = 3, .dly_tape = 65, .vintage = 40, .tw = {TWEND}},
-    {.name = "DEEP DRIFT", .tone = {T_STR3, T_BASS}, .feet1 = {F8, F16}, .level = {105, 115}, .brill = 50, .reso = 70, .detune = 75, .lfo_wave = LW_SINE,
+    {.name = "DEEP DRIFT", .cat = C_PAD, .tone = {T_STR3, T_BASS}, .feet1 = {F8, F16}, .level = {105, 115}, .brill = 50, .reso = 70, .detune = 75, .lfo_wave = LW_SINE,
      .lfo_spd = 30, .lfo_vcf = 100, .cho_mode = CHO_CHORUS, .cho_spd = 14, .cho_depth = 80, .v_a = 90, .v_r = 100, .aat_delay = 50, .aat_rise = 80,
      .aat_level = 80, .rv_mix = 60, .rv_size = 110, .rv_damp = 65, .rv_shim = 25, .ph_rate = 8, .ph_depth = 100, .ph_fb = 55, .ph_mix = 70, .vintage = 70,
      .tw = {TWEND}},
@@ -378,7 +383,7 @@ static const sound_t SOUNDS[] = {
 /* the user presets: 32 slots of 128 bytes in the bank sector, each a magic, the tones and the patch */
 #define NUSER 32u
 #define SLOT_MAGIC 0xA7u
-typedef struct { uint8_t magic, tone[2], layout; patch_t patch; } slot_t;   /* layout: 0 = a slot from before DRIVE / EQ (their bytes read 0) */
+typedef struct { uint8_t magic, tone[2], layout, cat; patch_t patch; } slot_t;   /* layout: 0 = a slot from before DRIVE / EQ (their bytes read 0); cat: its category, 0 = by its panel */
 _Static_assert(sizeof(slot_t) <= 128, "a slot fits 128 bytes");
 static union { slot_t slot[NUSER]; uint8_t raw[NUSER * 128u]; } bank;   /* (the union pads each slot to 128) */
 static uint8_t bank_ok;
@@ -473,6 +478,36 @@ static void sound_load(uint32_t i)
     set.sound = (uint8_t)(sd - SOUNDS);
 }
 
+static uint32_t classify(const patch_t *p)            /* a guess at a category from the panel alone (right about half the time: a pad, strings
+                                                       * and brass share tones); for a user preset saved from ALL, and an older slot */
+{
+    const chan_patch_t *c = &p->ch[p->ch[1].level > p->ch[0].level ? 1 : 0];
+    uint32_t a = c->v_a, d = c->v_d, s = c->v_s, r = c->v_r;
+    if (p->ch[0].noise > 80u || p->ch[1].noise > 80u || p->lfo_vcf > 90u) return C_FX;
+    if (p->rm_mod > 50u && s < 40u) return C_BELLS;
+    if (s < 30u && a < 30u) {                          /* a pluck: it decays away */
+        if (c->feet == FT_16) return C_BASS;
+        return c->feet >= FT_4 || p->rm_mod > 30u || d > 100u ? C_BELLS : C_KEYS;
+    }
+    if (c->feet == FT_16 && a < 40u) return C_BASS;
+    if (p->porta || p->unison) return C_LEAD;
+    if (a > 75u) return C_PAD;
+    if (a > 40u) return c->f_al > 72u && r < 60u ? C_BRASS : C_STRINGS;
+    return c->f_al > 72u ? C_BRASS : C_KEYS;
+}
+static uint8_t cat_sel;                                /* the category PRESETS browses (ALGO on HOME turns it); not kept */
+static uint32_t cat_of(uint32_t i)                     /* a sound's category, a used slot's by its panel */
+{
+    if (i < NSOUND) return SOUNDS[i].cat;
+    if (!slot_used(i - NSOUND)) return C_USER;
+    return slot_at(i - NSOUND)->cat && slot_at(i - NSOUND)->cat < C_USER ? slot_at(i - NSOUND)->cat : classify(&slot_at(i - NSOUND)->patch);
+}
+static int cat_match(uint32_t i)
+{
+    if (cat_sel == C_ALL) return 1;
+    if (cat_sel == C_USER) return i >= NSOUND && slot_used(i - NSOUND);
+    return cat_of(i) == cat_sel;
+}
 static void slot_load(uint32_t i)                     /* a user preset onto the panel */
 {
     const slot_t *sl = slot_at(i);
@@ -490,6 +525,7 @@ static void slot_store(uint32_t i)                    /* the panel into a user p
     sl->tone[0] = set.tone[0];
     sl->tone[1] = set.tone[1];
     sl->layout = 1;
+    sl->cat = (uint8_t)(cat_sel == C_ALL || cat_sel == C_USER ? classify(&patch) : cat_sel);   /* the category browsed at the save, else a guess */
     sl->patch = patch;
     bank_save(bank.raw, sizeof bank.raw);
     set.sound = (uint8_t)(NSOUND + i % NUSER);
@@ -700,7 +736,7 @@ static void draw_home(void)
         sn[j] = 0;
         text_box(120, 102, 120, sn, C_ACC, 2);
     }
-    text_box(120, 120, 120, set.sound < NSOUND ? "SOUND" : "USER", C_LEG, 2);
+    text_box(120, 120, 120, set.sound < NSOUND ? N_CAT[SOUNDS[set.sound].cat] : "USER", C_LEG, 2);   /* the category */
     for (k = 0; k < 4u; k++) {                         /* BRILL RESO MIX VOLUME as the lower panel's levers */
         const pdesc_t *d = &PAGES[PG_HOME].p[k];
         uint32_t v = *param_ptr(d);
@@ -1052,14 +1088,15 @@ static void app_loop(void)
         }
     }
     rib_tick_ms = fm1_ms;
-    if ((n = fm1_enc_take(ENC_ALGORITHM)) != 0) {     /* on HOME the next tone along the channel's row of buttons; elsewhere the group's pages, either way */
+    if ((n = fm1_enc_take(ENC_ALGORITHM)) != 0) {     /* on HOME the category PRESETS browses; elsewhere the group's pages, either way */
         if (page == PG_HOME) {
-            uint32_t i, pos = 0;
-            for (i = 0; i < 11u; i++)
-                if (TONE_ROW[set.chan][i] == set.tone[set.chan]) pos = i;
-            pos = (uint32_t)(((int32_t)pos + n + 44) % 11);
-            tone_load(set.chan, TONE_ROW[set.chan][pos]);
-            set.patch = patch; changed(); content_dirty = 1u;
+            uint32_t i, cnt = 0, j = 0;
+            char m[24];
+            cat_sel = (uint8_t)(((int32_t)cat_sel + n + NCAT * 4) % NCAT);
+            for (i = 0; i < NSOUND + NUSER; i++) cnt += cat_match(i) != 0;
+            while (N_CAT[cat_sel][j]) { m[j] = N_CAT[cat_sel][j]; j++; }
+            m[j++] = ' '; if (cnt >= 100u) m[j++] = (char)('0' + cnt / 100u); if (cnt >= 10u) m[j++] = (char)('0' + cnt / 10u % 10u); m[j++] = (char)('0' + cnt % 10u); m[j] = 0;
+            say(m);
         } else {
             uint32_t first = PAGE_GROUP[page][0], cnt = PAGE_GROUP[page][1];
             page = first + (uint32_t)(((int32_t)(page - first) + n + (int32_t)cnt * 4) % (int32_t)cnt);
@@ -1071,12 +1108,19 @@ static void app_loop(void)
         if (save_arm) {                                /* picking the slot to save into */
             save_arm = (uint32_t)(((int32_t)save_arm - 1 + n + (int32_t)NUSER * 4) % (int32_t)NUSER) + 1u;
             say(sound_name(NSOUND + save_arm - 1u, nb));
-        } else {
-            uint32_t i = (uint32_t)(((int32_t)set.sound + n + (int32_t)total * 4) % (int32_t)total);
-            sound_or_slot_load(i);
-            set.sound = (uint8_t)i;
-            set.patch = patch; changed(); content_dirty = 1u;
-            say(sound_name(i, nb));
+        } else {                                       /* the next sound of the category, |n| steps along */
+            uint32_t i = set.sound, k, steps = (uint32_t)(n < 0 ? -n : n), found = 0;
+            int32_t d = n < 0 ? -1 : 1;
+            for (k = 0; k < total * steps; k++) {
+                i = (uint32_t)(((int32_t)i + d + (int32_t)total) % (int32_t)total);
+                if (cat_match(i) && ++found == steps) break;
+            }
+            if (found) {
+                sound_or_slot_load(i);
+                set.sound = (uint8_t)i;
+                set.patch = patch; changed(); content_dirty = 1u;
+                say(sound_name(i, nb));
+            }
         }
     }
     if (b & (1u << BTN_SAVE)) {                       /* SAVE: arm, then confirm into the slot picked on ALGO */

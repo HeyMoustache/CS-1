@@ -20,6 +20,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 from arturia_read import read  # noqa: E402
 
 PRESETS = "/Library/Arturia/Presets/CS-80 V4/Factory/Factory"
+CAT_OF_TYPE = {"Pad": "PAD", "Strings": "STRINGS", "Brass & Winds": "BRASS", "Keys": "KEYS", "Electric Piano": "KEYS", "Organ": "KEYS",
+               "Piano": "KEYS", "Sequence": "KEYS", "Lead": "LEAD", "Bass": "BASS", "Sound Effects": "FX", "Drums": "FX", "Template": "FX"}
 FX_TYPES = ["None", "Reverb", "Delay", "Tape Echo", "PS Delay", "Chorus", "Chorus JUN-6", "Flanger", "Phaser",
             "Compressor", "Multiband", "BitCrusher", "Multi Filter", "Param EQ", "Stereo Pan", "Distortion",
             "BL-20 Flanger", "Super Unison"]
@@ -165,11 +167,13 @@ def main():
             if line:
                 entries.append(tuple(x.strip() for x in line.split("=", 1)))
     for src, ours in entries:
+        ours, _, cat = (x.strip() for x in ours.partition(":"))              # "Their name = OUR NAME : CATEGORY" (else the plugin's type)
         meta, p = read(os.path.join(a.dir, src))
         short = ours[:9]
         i1 = len(panels); panels.append([f"{short} I"] + [round(v, 3) for v in panel(p, 1)])
         i2 = len(panels); panels.append([f"{short} II"] + [round(v, 3) for v in panel(p, 2)])
         s, skipped = sound(p, ours, i1, i2)
+        s["cat"] = cat or CAT_OF_TYPE.get(meta.get("type", ""), "KEYS")
         sounds.append(s)
         print(f"{src:28} -> {ours:14} {meta.get('type', ''):10} skipped FX: {', '.join(skipped) or '-'}", file=sys.stderr)
     json.dump({"panels": panels, "sounds": sounds}, sys.stdout, indent=1)

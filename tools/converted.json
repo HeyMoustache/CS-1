@@ -1085,7 +1085,8 @@
    "aat_level": 80,
    "rv_mix": 127,
    "rv_size": 83,
-   "rv_damp": 75
+   "rv_damp": 75,
+   "cat": "STRINGS"
   },
   {
    "name": "RAIN ON NEON",
@@ -1131,7 +1132,8 @@
    "dly_fb": 51,
    "dly_sync": 6,
    "dly_ping": 0,
-   "dly_tape": 70
+   "dly_tape": 70,
+   "cat": "PAD"
   },
   {
    "name": "BRASS SECTION",
@@ -1172,7 +1174,8 @@
    "aat_level": 80,
    "rv_mix": 46,
    "rv_size": 83,
-   "rv_damp": 75
+   "rv_damp": 75,
+   "cat": "BRASS"
   },
   {
    "name": "RISING BRASS",
@@ -1218,7 +1221,8 @@
    "dly_tape": 70,
    "rv_mix": 53,
    "rv_size": 70,
-   "rv_damp": 30
+   "rv_damp": 30,
+   "cat": "BRASS"
   },
   {
    "name": "SOFT BRASS",
@@ -1263,7 +1267,8 @@
    "dly_ping": 0,
    "rv_mix": 50,
    "rv_size": 83,
-   "rv_damp": 75
+   "rv_damp": 75,
+   "cat": "BRASS"
   },
   {
    "name": "STRING MACHINE",
@@ -1309,7 +1314,8 @@
    "dly_tape": 70,
    "rv_mix": 33,
    "rv_size": 59,
-   "rv_damp": 76
+   "rv_damp": 76,
+   "cat": "STRINGS"
   },
   {
    "name": "STRINGS 81",
@@ -1350,7 +1356,8 @@
    "aat_level": 80,
    "rv_mix": 91,
    "rv_size": 90,
-   "rv_damp": 1
+   "rv_damp": 1,
+   "cat": "STRINGS"
   },
   {
    "name": "CHAMBER",
@@ -1396,7 +1403,8 @@
    "dly_tape": 70,
    "rv_mix": 71,
    "rv_size": 59,
-   "rv_damp": 76
+   "rv_damp": 76,
+   "cat": "STRINGS"
   },
   {
    "name": "WARM SKY",
@@ -1443,7 +1451,8 @@
    "dly_sync": 6,
    "dly_ping": 0,
    "rv_shift": 12,
-   "rv_shim": 1
+   "rv_shim": 1,
+   "cat": "PAD"
   },
   {
    "name": "FIELD FLUTE",
@@ -1484,7 +1493,8 @@
    "aat_level": 80,
    "rv_mix": 81,
    "rv_size": 67,
-   "rv_damp": 75
+   "rv_damp": 75,
+   "cat": "BRASS"
   },
   {
    "name": "ICE BELLS",
@@ -1529,7 +1539,8 @@
    "dly_ping": 1,
    "rv_mix": 58,
    "rv_size": 83,
-   "rv_damp": 75
+   "rv_damp": 75,
+   "cat": "BELLS"
   },
   {
    "name": "BELL TOWER",
@@ -1570,7 +1581,8 @@
    "aat_level": 80,
    "rv_mix": 54,
    "rv_size": 83,
-   "rv_damp": 75
+   "rv_damp": 75,
+   "cat": "BELLS"
   },
   {
    "name": "GLASS ORGAN",
@@ -1617,7 +1629,8 @@
    "rv_shim": 63,
    "rv_mix": 40,
    "rv_size": 102,
-   "rv_damp": 75
+   "rv_damp": 75,
+   "cat": "KEYS"
   },
   {
    "name": "MUSIC BOX",
@@ -1660,7 +1673,8 @@
    "dly_fb": 51,
    "dly_sync": 6,
    "dly_ping": 0,
-   "dly_tape": 70
+   "dly_tape": 70,
+   "cat": "BELLS"
   },
   {
    "name": "CLAV FUNK",
@@ -1707,7 +1721,8 @@
    "dly_fb": 51,
    "dly_sync": 6,
    "dly_ping": 0,
-   "dly_tape": 70
+   "dly_tape": 70,
+   "cat": "KEYS"
   },
   {
    "name": "SWIM BASS",
@@ -1750,7 +1765,8 @@
    "dly_fb": 51,
    "dly_sync": 6,
    "dly_ping": 0,
-   "dly_tape": 70
+   "dly_tape": 70,
+   "cat": "BASS"
   },
   {
    "name": "FAR SHORE",
@@ -1796,7 +1812,8 @@
    "dly_tape": 70,
    "rv_mix": 81,
    "rv_size": 92,
-   "rv_damp": 70
+   "rv_damp": 70,
+   "cat": "PAD"
   },
   {
    "name": "RAINDROPS",
@@ -1844,7 +1861,8 @@
    "dly_ping": 0,
    "dly_tape": 70,
    "rv_shift": 12,
-   "rv_shim": 1
+   "rv_shim": 1,
+   "cat": "KEYS"
   }
  ]
 }
