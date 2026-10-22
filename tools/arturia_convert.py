@@ -153,13 +153,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--list", default=os.path.join(os.path.dirname(__file__), "converted.txt"))
     ap.add_argument("--dir", default=PRESETS)
+    ap.add_argument("--all", action="store_true", help="every preset in --dir under its own name: a corpus for the randomiser, not sounds to ship")
     a = ap.parse_args()
     panels, sounds = [], []
-    for line in open(a.list, encoding="utf-8"):
-        line = line.split("#", 1)[0].strip()
-        if not line:
-            continue
-        src, ours = (x.strip() for x in line.split("=", 1))
+    if a.all:
+        entries = [(n, n) for n in sorted(os.listdir(a.dir)) if not n.startswith(".")]
+    else:
+        entries = []
+        for line in open(a.list, encoding="utf-8"):
+            line = line.split("#", 1)[0].strip()
+            if line:
+                entries.append(tuple(x.strip() for x in line.split("=", 1)))
+    for src, ours in entries:
         meta, p = read(os.path.join(a.dir, src))
         short = ours[:9]
         i1 = len(panels); panels.append([f"{short} I"] + [round(v, 3) for v in panel(p, 1)])
