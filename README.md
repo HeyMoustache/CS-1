@@ -114,5 +114,6 @@ hold OCT- at power-on for the USB rescue; M-VAVE's updater or the Firmware Hub's
 you back to stock, and any firmware with Felucca's or M-VAVE's update loader installs over CS-1 (from 0.3.2;
 before, the official package was refused on a unit with an older flash head). tests/ota_test.c runs the update
 entry on a computer against a package. `tools/arminator_read.py` and `tools/arturia_convert.py --all` read whole
-preset libraries (Arminator 2's banks via tests/vstdump.c under Wine, the CS-80 V's) into a corpus for a randomiser;
-nothing of theirs is shipped.
+preset libraries (Arminator 2's banks via tests/vstdump.c under Wine, the CS-80 V's) into a corpus; `tools/gen_random.py`
+reduces the 910 sounds to the RANDOM page's model (a mean a category and twelve directions, firmware/gen/cs1_random.h);
+nothing of the libraries themselves is shipped.

@@ -40,6 +40,7 @@
 #include "cs1_dsp.h"
 #include "cs1_voice.h"
 #include "cs1_presets.h"
+#include "cs1_random.h"
 
 /* ---- the sound (the audio ISR) */
 static void app_audio(int32_t *out, uint32_t n) { voices_block(out, n); }
@@ -63,16 +64,21 @@ static settings_t set;
 
 /* ---- the panel: pages of four parameters, in the CS-80's sections; each a slider with the panel's cap colour
  * and its top / bottom legend */
-enum { K_NUM = 0, K_BIP, K_FEET, K_WAVE, K_LWAVE, K_ONOFF, K_CHO, K_MCHAN, K_EXPR, K_DIV, K_LDIV, K_TEMPO, K_SUS, K_CENT, K_SEMI };   /* how a value is shown */
+enum { K_NUM = 0, K_BIP, K_FEET, K_WAVE, K_LWAVE, K_ONOFF, K_CHO, K_MCHAN, K_EXPR, K_DIV, K_LDIV, K_TEMPO, K_SUS, K_CENT, K_SEMI, K_SCOPE, K_CAT };   /* how a value is shown */
+/* the randomiser's knobs (RANDOM page): not kept across a power-off */
+typedef struct { uint8_t amount, scope, cat, roll; } rnd_t;
+static rnd_t rnd = {48, 0, 0, 0};
+static const char *const N_SCOPE[4] = {"ALL", "TONES", "GLOBAL", "FX"};
 enum { CW = 0, CG, CR, CK, CY, CS };                  /* a cap: white, green, red, black (a stripe), yellow, silver */
-typedef struct { const char *name; uint8_t off, max, kind, global, color; const char *hi, *lo; } pdesc_t;   /* global 2: settings */
+typedef struct { const char *name; uint8_t off, max, kind, global, color; const char *hi, *lo; } pdesc_t;   /* global 2: settings, 3: the randomiser's */
 #define CH(f, name, max, kind, c, hi, lo) {name, (uint8_t)offsetof(chan_patch_t, f), max, kind, 0, c, hi, lo}
 #define GL(f, name, max, kind, c, hi, lo) {name, (uint8_t)offsetof(patch_t, f), max, kind, 1, c, hi, lo}
 #define ST(f, name, max, kind, c, hi, lo) {name, (uint8_t)offsetof(settings_t, f), max, kind, 2, c, hi, lo}
+#define RN(f, name, max, kind, c, hi, lo) {name, (uint8_t)offsetof(rnd_t, f), max, kind, 3, c, hi, lo}
 #define NONE {0, 0, 0, 0, 0, 0, 0, 0}
 typedef struct { const char *title; pdesc_t p[4]; } page_t;
 enum { PG_HOME = 0, PG_VCO, PG_VCO2, PG_VCF, PG_FENV, PG_VENV, PG_VCA2, PG_TOUCH,
-       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RIB, PG_RING, PG_DRIVE, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_REVERB2, PG_PHASER, PG_MAIN, PG_MIDI, PG_KEYS, PG_KEYS2, NPAGE };
+       PG_SUB, PG_SUB2, PG_TRESP, PG_AUTO, PG_PLAY, PG_KBD, PG_SUS, PG_RIB, PG_RND, PG_RING, PG_DRIVE, PG_CHO, PG_DELAY, PG_DELAY2, PG_REVERB, PG_REVERB2, PG_PHASER, PG_MAIN, PG_MIDI, PG_KEYS, PG_KEYS2, NPAGE };
 static const page_t PAGES[NPAGE] = {
     {"TONES", {GL(brill, "BRILL", 127, K_BIP, CG, "+", "-"), GL(reso, "RESO", 127, K_BIP, CR, "+", "-"),
                        GL(mix, "MIX", 127, K_NUM, CW, "II", "I"), GL(volume, "VOLUME", 127, K_NUM, CK, "10", "0")}},
@@ -103,6 +109,8 @@ static const page_t PAGES[NPAGE] = {
     {"MODES",  {ST(sus2, "SUSTAIN", 1, K_SUS, CK, "", ""), GL(unison, "UNISON", 127, K_NUM, CW, "WIDE", "OFF"),
                 ST(vel_curve, "VELOC", 127, K_NUM, CG, "HARD", "SOFT"), NONE}},
     {"RIBBON",  {ST(rib_hold, "HOLD", 1, K_ONOFF, CK, "", ""), ST(rib_range, "RANGE", 127, K_NUM, CW, "WIDE", "FINE"), ST(rib_return, "RETURN", 127, K_NUM, CK, "SLOW", "FAST"), ST(rib_delay, "DELAY", 127, K_NUM, CK, "LONG", "NONE")}},
+    {"RANDOM",  {RN(amount, "AMOUNT", 127, K_NUM, CW, "WILD", "NEAR"), RN(scope, "SCOPE", 3, K_SCOPE, CK, "", ""),
+                 RN(cat, "CATEG", 9, K_CAT, CK, "", ""), RN(roll, "ROLL", 127, K_NUM, CY, "", "")}},
     {"RING MOD", {GL(rm_mod, "MOD", 127, K_NUM, CS, "10", "0"), GL(rm_spd, "SPEED", 127, K_NUM, CW, "FAST", "SLOW"),
                   GL(rm_depth, "DEPTH", 127, K_NUM, CW, "10", "0"), GL(rm_d, "DECAY", 127, K_NUM, CK, "LONG", "SHORT")}},   /* (the attack stays at 10, as every sound has it) */
     {"DRIVE",  {GL(drive, "DRIVE", 127, K_NUM, CR, "10", "0"), GL(drive_lv, "LEVEL", 127, K_NUM, CK, "+12", "-12"),
@@ -129,7 +137,7 @@ static const page_t PAGES[NPAGE] = {
 /* the pages a button cycles through, for the "2/4" in the header: {first, count} by page */
 static const uint8_t PAGE_GROUP[NPAGE][2] = {
     {PG_HOME, 1}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7}, {PG_VCO, 7},
-    {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_PLAY, 4}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8},
+    {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_SUB, 4}, {PG_PLAY, 5}, {PG_PLAY, 5}, {PG_PLAY, 5}, {PG_PLAY, 5}, {PG_PLAY, 5}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8}, {PG_RING, 8},
     {PG_MAIN, 4}, {PG_MAIN, 4}, {PG_MAIN, 4}, {PG_MAIN, 4}};
 static const char *const N_FEET[6] = {"16'", "8'", "5.3'", "4'", "2.7'", "2'"};
 static const char *const N_WAVE[3] = {"SAW", "PULSE", "BOTH"};
@@ -402,7 +410,7 @@ static int patch_valid(const patch_t *p)            /* every byte a knob could h
 static int slot_used(uint32_t i) { return slot_at(i)->magic == SLOT_MAGIC && patch_valid(&slot_at(i)->patch); }
 static uint8_t *param_ptr(const pdesc_t *d)
 {
-    return d->global == 2 ? (uint8_t *)&set + d->off : d->global ? (uint8_t *)&patch + d->off : (uint8_t *)&patch.ch[set.chan] + d->off;
+    return d->global == 3 ? (uint8_t *)&rnd + d->off : d->global == 2 ? (uint8_t *)&set + d->off : d->global ? (uint8_t *)&patch + d->off : (uint8_t *)&patch.ch[set.chan] + d->off;
 }
 static void tone_load(uint32_t ch, uint32_t tone)     /* a channel's tone, keeping its feet and level */
 {
@@ -611,6 +619,8 @@ static void fmt_value(const pdesc_t *d, uint32_t v, char *s)   /* up to 6 charac
     case K_SUS: src = v ? "II" : "I"; break;
     case K_CENT: n = ((int32_t)v - 64) * 100 / 64; break;   /* TUNE in cents */
     case K_SEMI: n -= 24; break;                             /* TRANS in semitones */
+    case K_SCOPE: src = N_SCOPE[v > 3u ? 3u : v]; break;
+    case K_CAT: src = N_CAT[v >= NCAT ? NCAT - 1u : v]; break;
     case K_LDIV: src = N_LDIV[v > 5u ? 5u : v]; break;
     case K_TEMPO: {                                    /* the tempo from the clock, as beats a minute */
         uint32_t bpm = beat_ms ? (60000u + beat_ms / 2u) / beat_ms : 0;
@@ -943,6 +953,52 @@ static void sustain_set(uint32_t on)
             if (sus_held[n >> 3] >> (n & 7u) & 1u) { sus_held[n >> 3] &= (uint8_t)~(1u << (n & 7u)); voice_off(n); }
 }
 static void changed(void) { dirty = 1; t_change = fm1_ms; }
+
+/* ---- the randomiser: a category's mean plus random amounts along the corpus's directions (cs1_random.h), then the rules */
+static uint32_t rnd_st;
+static int32_t gauss_q6(void)                         /* ~N(0, 1) in 1/64: three uniforms summed */
+{
+    int32_t s = 0;
+    uint32_t i;
+    for (i = 0; i < 3u; i++) s += (int32_t)(noise32(&rnd_st) >> 25) - 64;   /* each -64..63 */
+    return (s * 37) >> 6;                                 /* the sum's spread brought to 64 */
+}
+static void roll(void)
+{
+    uint8_t *b = (uint8_t *)&patch;
+    uint32_t f, k, cat = rnd.cat >= RND_NCAT ? 0 : rnd.cat, sc = rnd.scope, on = 0;
+    int32_t z[RND_K];
+    if (!rnd_st) rnd_st = fm1_ms * 2654435761u + 1u;
+    for (k = 0; k < RND_K; k++) z[k] = (gauss_q6() * (int32_t)rnd.amount) >> 6;   /* AMOUNT 64 = the corpus's own spread */
+    for (f = 0; f < RND_N; f++) {
+        int32_t v;
+        if (sc && RND_GROUP[f] != sc - 1u) continue;                  /* SCOPE: the tones, the globals or the effects alone */
+        v = RND_MEAN[cat][f] << 6;
+        for (k = 0; k < RND_K; k++) v += z[k] * (int32_t)RND_SIG[cat][k] * (int32_t)RND_COMP[k][f] >> 8;   /* 1/64 x 1/127 x 1/127 -> 1/64 */
+        v = (v + 32) >> 6;
+        b[f] = (uint8_t)clamp(v, 0, RND_MAX[f]);
+    }
+    /* the rules: what the statistics cannot be trusted with */
+    for (f = 0; f < NCH; f++) {
+        chan_patch_t *c = &patch.ch[f];
+        if (c->hp_cut + 16u > c->lp_cut) c->hp_cut = (uint8_t)(c->lp_cut > 24u ? c->lp_cut - 24u : 0u);
+        if (c->wave == W_SAW) { c->pwm = 0; c->pw = 0; }
+        if (!c->vcf_lv && !c->sine) c->vcf_lv = 100;
+        if (c->level < 40u) c->level = 40;
+        if (cat != C_FX && c->noise > 60u) c->noise = 60;
+    }
+    patch.volume = 100; patch.mix = (uint8_t)clamp(patch.mix, 24, 104); patch.unison = 0;
+    patch.kb_bl = patch.kb_bh = patch.kb_ll = patch.kb_lh = 64;
+    if (patch.at_vco < 10u) patch.at_vco = 10;
+    if (patch.rm_mod < 20u) patch.rm_mod = 0;
+    if (patch.dly_mix < 16u) patch.dly_mix = 0;
+    if (patch.ph_mix < 16u) patch.ph_mix = 0;
+    if (patch.drive < 12u) patch.drive = 0;
+    if (!patch.rv_shim) patch.rv_shift = 12;
+    on = (patch.dly_mix != 0) + (patch.rv_mix > 60u) + (patch.ph_mix != 0) + (patch.drive != 0) + (patch.cho_mode != 0);
+    if (on > 3u) { patch.ph_mix = 0; patch.drive = 0; }                /* no pile-ups: the chorus, the delay and the plate at most */
+    rm_trig++;
+}
 static uint32_t vel_map(uint32_t v)                    /* VELOC: the MIDI velocity through a curve, 64 linear, below softer (a light touch louder), above harder */
 {
     int32_t c = (int32_t)set.vel_curve, x = (int32_t)(v > 127u ? 127u : v);
@@ -1065,7 +1121,7 @@ static void app_loop(void)
     if (b & (1u << BTN_ENV)) page = page == PG_FENV ? PG_VENV : PG_FENV;
     if (b & (1u << BTN_LFO)) page = page >= PG_SUB && page < PG_AUTO ? page + 1u : PG_SUB;
     if (b & (1u << BTN_FX)) page = page >= PG_RING && page < PG_PHASER ? page + 1u : PG_RING;   /* (PHASER is the group's last) */
-    if (b & (1u << BTN_ARP)) page = page >= PG_PLAY && page < PG_RIB ? page + 1u : PG_PLAY;
+    if (b & (1u << BTN_ARP)) page = page >= PG_PLAY && page < PG_RND ? page + 1u : PG_PLAY;
     if (b & (1u << BTN_GLO)) page = page >= PG_MAIN && page < PG_KEYS2 ? page + 1u : PG_MAIN;
     if (b & (1u << BTN_SEL)) { set.chan ^= 1u; changed(); content_dirty = 1u; }
     if (b & (1u << BTN_PLAY)) { sustain_set(!sustain); say(sustain ? "HOLD ON" : "HOLD OFF"); }   /* a sustain latch */
@@ -1148,7 +1204,7 @@ static void app_loop(void)
             uint8_t *p;
             int32_t v;
             if (!d->name) continue;
-            if (learn_arm && d->global != 2) {         /* learning: this is the parameter; now the CC */
+            if (learn_arm && d->global < 2u) {         /* learning: this is the parameter; now the CC */
                 char m[24] = "LEARN ";
                 uint32_t i = 6, j = 0;
                 while (d->name[j]) m[i++] = d->name[j++];
@@ -1160,7 +1216,7 @@ static void app_loop(void)
             p = param_ptr(d);
             v = clamp((int32_t)*p + n * (d->max >= 100u ? 2 : 1), 0, d->max);   /* (a 0..127 knob: two a detent) */
             if (p == &set.nlearn) { if (n < 0 && set.nlearn) { set.nlearn = 0; changed(); say("LEARNS CLEARED"); draw_param(k); } continue; }
-            if (v != *p) { *p = (uint8_t)v; cc_latched[k] = 0; set.patch = patch; changed(); if (page == PG_HOME) draw_home(); else draw_param(k); tones_drawn = ~0u; if (page_has_drawing()) draw_shape(); }
+            if (v != *p) { *p = (uint8_t)v; cc_latched[k] = 0; if (p == &rnd.roll) roll(); set.patch = patch; changed(); if (page == PG_HOME) draw_home(); else draw_param(k); tones_drawn = ~0u; if (page_has_drawing()) draw_shape(); }
         }
 
     while (midi_get(&st, &d1, &d2)) {                  /* MIDI in (USB or TRS) */
@@ -1199,7 +1255,7 @@ static void app_loop(void)
                 if (set.learn[k].cc == d1) {
                     const pdesc_t *d = &PAGES[set.learn[k].page % NPAGE].p[set.learn[k].knob & 3u];
                     uint8_t *q;
-                    if (!d->name || d->global == 2) break;
+                    if (!d->name || d->global >= 2u) break;
                     q = d->global ? (uint8_t *)&patch + d->off : (uint8_t *)&patch.ch[set.chan] + d->off;
                     *q = (uint8_t)(d->max == 127u ? d2 : (d2 * (d->max + 1u)) >> 7);
                     set.patch = patch; changed(); tones_drawn = ~0u;
@@ -1228,6 +1284,7 @@ static void app_loop(void)
                 }
                 cc_last[j] = (uint8_t)v;
                 *tgt = (uint8_t)v;
+                if (tgt == &rnd.roll) roll();
                 set.patch = patch; changed(); midi_redraw |= 1u << (d1 - 80u);
                 continue;
             }
@@ -1290,7 +1347,7 @@ static void app_loop(void)
     fm1_led_key(BTN_ENV, page == PG_FENV || page == PG_VENV);
     fm1_led_key(BTN_LFO, page >= PG_SUB && page <= PG_AUTO);
     fm1_led_key(BTN_FX, page >= PG_RING && page <= PG_PHASER);
-    fm1_led_key(BTN_ARP, page >= PG_PLAY && page <= PG_RIB);
+    fm1_led_key(BTN_ARP, page >= PG_PLAY && page <= PG_RND);
     fm1_led_key(BTN_PLAY, sustain);
     fm1_led_key(BTN_SEQ, aat_on);
     fm1_led_key(BTN_GLO, page >= PG_MAIN && page <= PG_KEYS2);

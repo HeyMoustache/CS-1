@@ -16,7 +16,7 @@ block = s[s.index("static const page_t PAGES[NPAGE]"):s.index("};", s.index("sta
 for m in re.finditer(r'\{"([^"]+)",\s*\{(.*?)\}\},', block, re.S):
     title, body = m.group(1), m.group(2)
     params = []
-    for pm in re.finditer(r'(CH|GL|ST)\((\w+), "([^"]+)", (\d+), (K_\w+), (C\w), "([^"]*)", "([^"]*)"\)|NONE', body):
+    for pm in re.finditer(r'(CH|GL|ST|RN)\((\w+), "([^"]+)", (\d+), (K_\w+), (C\w), "([^"]*)", "([^"]*)"\)|NONE', body):
         if pm.group(0) == "NONE":
             continue
         params.append({"scope": pm.group(1), "field": pm.group(2), "name": pm.group(3), "max": int(pm.group(4)),
@@ -25,7 +25,7 @@ for m in re.finditer(r'\{"([^"]+)",\s*\{(.*?)\}\},', block, re.S):
 
 CAP = {"CW": "w", "CG": "g", "CR": "r", "CK": "k", "CY": "y", "CS": "s"}
 GROUP = {"TONES": "HOME", "VCO": "EDIT", "VCO 2": "EDIT", "VCF": "EDIT", "VCF EG": "EDIT", "VCA EG": "EDIT", "VCA": "EDIT", "TOUCH": "EDIT",
-         "SUB OSC": "LFO", "SUB OSC 2": "LFO", "TOUCH RESP": "LFO", "AUTO AT": "LFO", "PERFORM": "ARP", "KEYBOARD": "ARP", "MODES": "ARP", "RIBBON": "ARP",
+         "SUB OSC": "LFO", "SUB OSC 2": "LFO", "TOUCH RESP": "LFO", "AUTO AT": "LFO", "PERFORM": "ARP", "KEYBOARD": "ARP", "MODES": "ARP", "RANDOM": "ARP", "RIBBON": "ARP",
          "RING MOD": "FX", "DRIVE": "FX", "CHORUS": "FX", "DELAY": "FX", "DELAY 2": "FX", "REVERB": "FX", "SHIMMER": "FX", "PHASER": "FX", "MAIN": "GLO", "MIDI": "GLO", "KEYS": "GLO", "KEYS 2": "GLO"}
 PAGE_NOTE = {
     "TONES": "The HOME page: the two rows of tone buttons, the sound's name, and the lower panel's performance levers.",
@@ -42,6 +42,7 @@ PAGE_NOTE = {
     "AUTO AT": "A pressure curve every note plays by itself, for when nothing sends aftertouch: a wait, a rise to a level, a fall after the key goes. SEQ switches it on and off.",
     "PERFORM": "Portamento and glissando, channel II's detune, and VINTAGE: each voice drifting a few cents of its own.",
     "KEYBOARD": "Keyboard control: brilliance and level tilted towards the low or the high end of the keyboard. Nothing at middle C, full effect three octaves out.",
+    "RANDOM": "A new sound drawn from what 910 sounds (ours, the CS-80 V's and Arminator 2's) have in common: a category's mean plus random amounts along the directions they vary together, so every setting is drawn with the others. ROLL makes one; the star and a PRESETS click away and back take you back; SAVE keeps it.",
     "MODES": "The sustain mode: I sustains every note on its own, II ends the sustain of the chord before when a new one is played. UNISON plays two voices a note, a little flat and a little sharp, for four-note polyphony. VELOC is the curve MIDI velocity comes through.",
     "KEYS": "Velocity and pressure from the FM-1's own keys (Velo's sensing): twenty of the keys, F3 to C5, sit on rows the chip can measure; the carbon pill under each reads softer or harder as you press. Instrument settings.",
     "KEYS 2": "The pressure range and the top row's fixed velocity.",
@@ -82,6 +83,7 @@ DESC = {
     ("PERFORM", "DETUNE"): "Channel II sharp or flat against I, about half a semitone each way.", ("PERFORM", "VINTAG"): "Vintage: each voice wanders to a new tuning offset every second or so, up to 12 cents.",
     ("KEYBOARD", "BRIL.LO"): "Brighter (+) or darker (−) towards the bottom of the keyboard.", ("KEYBOARD", "BRIL.HI"): "The same towards the top.",
     ("KEYBOARD", "LEV.LO"): "Louder or quieter towards the bottom (it can only cut).", ("KEYBOARD", "LEV.HI"): "The same towards the top.",
+    ("RANDOM", "AMOUNT"): "How far from the category's mean: 64 is the corpus's own spread, less stays typical, more goes strange.", ("RANDOM", "SCOPE"): "What rolls: everything, the two tones alone, the globals alone (the sub oscillator, touch, performance) or the effects alone.", ("RANDOM", "CATEG"): "The category to roll within; ALL is the whole corpus.", ("RANDOM", "ROLL"): "Turn for a new sound. A few rules hold after every roll: the high-pass below the low-pass, no PWM without a pulse, a floor on the levels, at most three effects.",
     ("MODES", "SUSTAIN"): "I or II.", ("MODES", "UNISON"): "Two voices a note, this far apart: up to a quarter tone at full. Off at 0. On, the polyphony is four notes.", ("MODES", "VELOC"): "The MIDI velocity curve: 64 is as played, lower makes a light touch louder, higher needs a harder hit.",
     ("KEYS", "SENSE"): "ON: the sensed keys play with velocity and send polyphonic pressure; OFF: every key plays at velocity 100, as a switch.", ("KEYS", "DRIVE"): "How hard the row is driven while a key is read, 1 to 4; 2 measured best (firm presses repeat within a few counts). 0 reads through the pull-up alone, which barely tells presses apart.", ("KEYS", "CURVE"): "The velocity curve's bend: HARD makes a given press play louder, SOFT quieter. Free playing should sit around 60.", ("KEYS", "LIGHT"): "The reading of the lightest press that still plays: velocity 1. Lower it if soft notes come out louder than you mean.",
     ("KEYS 2", "SENSIT"): "How much lean is full pressure, counted from where the key rests (the zero follows the key as it settles) and curved so a light lean does little: LOW wants a hard press, HIGH a squeeze.", ("KEYS 2", "TOP VEL"): "The velocity of the seven top keys, C#5 to G5, which have no measurable row.",
@@ -198,8 +200,8 @@ for title, params in pages:
     w('<table><tr><th>Knob</th><th>Name</th><th>Range</th><th>What it does</th></tr>')
     for i, p in enumerate(params):
         rng = f'{p["lo"]} … {p["hi"]}' if p["hi"] or p["lo"] else {"K_FEET": "16' 8' 5.3' 4' 2.7' 2'", "K_WAVE": "SAW PULSE BOTH", "K_LWAVE": "SINE TRI SAW SAW DN SQR", "K_ONOFF": "OFF ON",
-                                                                  "K_CHO": "OFF CHORUS TREM FLANGE", "K_DIV": "FREE 1/16 … 1/2", "K_LDIV": "FREE 1/4 … 4 BAR", "K_SUS": "I II", "K_TEMPO": "(read-only)", "K_CENT": "-98 … +98 cents", "K_SEMI": "-24 … +24"}.get(p["kind"], "0 … 127")
-        scope = {"CH": "channel", "GL": "global", "ST": "setting"}[p["scope"]]
+                                                                  "K_CHO": "OFF CHORUS TREM FLANGE", "K_DIV": "FREE 1/16 … 1/2", "K_LDIV": "FREE 1/4 … 4 BAR", "K_SUS": "I II", "K_TEMPO": "(read-only)", "K_CENT": "-98 … +98 cents", "K_SEMI": "-24 … +24", "K_SCOPE": "ALL TONES GLOBAL FX", "K_CAT": "ALL PAD STRINGS BRASS KEYS BELLS BASS LEAD FX USER"}.get(p["kind"], "0 … 127")
+        scope = {"CH": "channel", "GL": "global", "ST": "setting", "RN": "randomiser"}[p["scope"]]
         w(f'<tr><td class="k">KNOB {i + 1}</td><td class="k"><span class="cap {CAP[p["color"]]}"></span>{html.escape(p["name"])}</td><td>{html.escape(rng)}<br><small>{scope}</small></td><td>{html.escape(DESC.get((title, p["name"]), ""))}</td></tr>')
     w('</table>')
 w('<h2 id="sounds">The sounds</h2><p>In PRESETS order, which is also the program change number. Each pairs a row I tone with a row II tone, as the instrument does. The classic ones are recipes after what is documented about the records, not transcriptions: a guide to the character.</p>')
