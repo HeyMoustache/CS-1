@@ -1,0 +1,1016 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only
+     CS-1 Programmer: a CS-80-style editor for CS-1 on the M-VAVE FM-1. It plays the real CS-1 firmware in the
+     browser (cs1.wasm in an AudioWorklet) and programs the FM-1 over the editor link (docs/SYSEX.md). One file:
+     web/editor/build.sh puts the firmware's data, the worklet and the wasm inside it. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS-1 Programmer</title>
+<meta name="description" content="A Yamaha CS-80 style editor for the CS-1 firmware on the M-VAVE FM-1.">
+<style>
+:root {
+  color-scheme: dark;
+  --panel: #262423; --panel-2: #1d1b1a; --slot: #0e0d0d; --silk: #e8e4da; --legend: #8f8a82; --rule: #6d6862;
+  --accent: #ff9a3c; --ok: #4fc58a; --bad: #e6505c; --wood-a: #5a2e1b; --wood-b: #7a4026; --wood-c: #3e1f12;
+  --cap-white: #eceae2; --cap-green: #00965c; --cap-red: #d62838; --cap-black: #3e3e44; --cap-yellow: #ecc828; --cap-silver: #a0a0a8;
+  --btn: #34302e; --btn-line: #4c4643;
+  --tone-0: #e6be28; --tone-1: #c82834; --tone-2: #e8e4d7; --tone-3: #006e55;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #121110; color: var(--silk); font: 13px/1.35 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: .02em; }
+button, select, input { font: inherit; color: inherit; }
+.case { max-width: 1480px; margin: 0 auto; padding: 14px 0 24px; display: grid; grid-template-columns: 18px 1fr 18px; }
+.wood { border-radius: 6px; background:
+  repeating-linear-gradient(176deg, rgba(0,0,0,.18) 0 2px, transparent 2px 7px),
+  linear-gradient(90deg, var(--wood-c), var(--wood-b) 40%, var(--wood-a) 70%, var(--wood-c)); }
+.panel { background: var(--panel); padding: 10px 14px 16px; min-width: 0; }
+
+/* ---- the top bar */
+.top { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 4px 2px 12px; border-bottom: 1px solid var(--rule); }
+.logo { font-weight: 700; letter-spacing: .22em; font-size: 20px; white-space: nowrap; }
+.logo small { display: block; font-size: 10px; letter-spacing: .3em; color: var(--legend); font-weight: 400; }
+.name { flex: 1 1 220px; min-width: 180px; display: flex; flex-direction: column; gap: 2px; }
+.name label { font-size: 10px; letter-spacing: .25em; color: var(--legend); }
+.name input { background: var(--slot); border: 1px solid var(--btn-line); border-radius: 4px; padding: 6px 9px; font-size: 16px; letter-spacing: .12em; text-transform: uppercase; }
+.group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.btn { background: var(--btn); border: 1px solid var(--btn-line); border-radius: 4px; padding: 6px 11px; cursor: pointer; white-space: nowrap; letter-spacing: .08em; font-size: 12px; text-transform: uppercase; }
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: .38; cursor: default; }
+.btn.on { background: var(--accent); color: #1a1310; border-color: var(--accent); font-weight: 700; }
+.btn.small { padding: 4px 8px; font-size: 11px; }
+select.btn { padding-right: 6px; }
+.led { width: 9px; height: 9px; border-radius: 50%; background: #444; display: inline-block; margin-right: 6px; vertical-align: 1px; box-shadow: inset 0 0 2px #000; }
+.led.on { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.led.bad { background: var(--bad); }
+.status { font-size: 12px; color: var(--legend); min-height: 16px; padding: 6px 2px 0; }
+.status.ok { color: var(--ok); } .status.bad { color: var(--bad); }
+
+/* ---- sections, sliders */
+.strip { display: flex; flex-wrap: wrap; gap: 14px 18px; padding: 14px 0 6px; border-bottom: 1px solid var(--rule); }
+.chan-label { align-self: stretch; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; width: 34px; }
+.chan-label b { font-size: 22px; letter-spacing: .05em; }
+.chan-label span { font-size: 9px; color: var(--legend); letter-spacing: .2em; writing-mode: vertical-rl; transform: rotate(180deg); }
+.sec { display: flex; flex-direction: column; }
+.sec h3 { margin: 0 0 6px; font-size: 10px; font-weight: 400; letter-spacing: .28em; color: var(--silk); display: flex; align-items: center; gap: 6px; }
+.sec h3::before, .sec h3::after { content: ""; height: 1px; background: var(--rule); flex: 1; min-width: 6px; }
+.knobs { display: flex; gap: 4px; }
+.sl { width: 40px; display: flex; flex-direction: column; align-items: center; user-select: none; -webkit-user-select: none; touch-action: none; }
+.sl .leg { font-size: 8px; color: var(--legend); height: 11px; white-space: nowrap; overflow: hidden; max-width: 40px; }
+.sl .track { position: relative; width: 26px; height: 118px; margin: 2px 0; cursor: ns-resize; outline: none; border-radius: 3px; }
+.sl .track:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.sl .track::before { content: ""; position: absolute; left: 50%; top: 4px; bottom: 4px; width: 6px; margin-left: -3px; background: var(--slot); border-radius: 3px; box-shadow: inset 0 1px 2px #000; }
+.sl .ticks { position: absolute; inset: 6px 0; background: repeating-linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px 10.1%); -webkit-mask: linear-gradient(90deg, #000 0 5px, transparent 5px 21px, #000 21px); mask: linear-gradient(90deg, #000 0 5px, transparent 5px 21px, #000 21px); opacity: .65; }
+.sl .cap { position: absolute; left: 0; width: 26px; height: 14px; margin-top: -7px; border-radius: 2px; background: var(--c, var(--cap-white));
+  box-shadow: 0 2px 2px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.35); }
+.sl .cap::after { content: ""; position: absolute; left: 2px; right: 2px; top: 6px; height: 2px; background: rgba(0,0,0,.45); }
+.sl .val { font-size: 11px; font-variant-numeric: tabular-nums; height: 15px; color: var(--silk); white-space: nowrap; }
+.sl .nm { font-size: 9px; letter-spacing: .06em; white-space: nowrap; color: var(--silk); }
+.sl.changed .val { color: var(--accent); }
+canvas.env { width: 120px; height: 40px; margin-top: 6px; background: var(--slot); border-radius: 3px; align-self: center; }
+
+/* ---- tone buttons */
+.tones { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 10px 0 0 52px; }
+.tone-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.tbtn { width: 46px; height: 30px; border-radius: 3px; border: 0; cursor: pointer; font-size: 8px; letter-spacing: .04em; line-height: 1.05; padding: 2px; color: #1a1612; background: var(--tc); opacity: .55; box-shadow: inset 0 -3px 0 rgba(0,0,0,.25); position: relative; }
+.tbtn.c3, .tbtn.c1 { color: #f4f0e6; }
+.tbtn.lit { opacity: 1; box-shadow: 0 0 10px var(--tc), inset 0 -3px 0 rgba(0,0,0,.25); }
+.tbtn.lit::after { content: ""; position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 4px #fff; }
+.tone-more { max-width: 190px; }
+.tone-star { color: var(--accent); font-size: 11px; min-width: 70px; }
+
+/* ---- keyboard */
+.play { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; padding-top: 14px; align-items: end; }
+.play-ctl { display: flex; flex-direction: column; gap: 8px; }
+.ribbon { height: 26px; background: linear-gradient(#0b0a0a, #1b1918); border: 1px solid var(--btn-line); border-radius: 4px; position: relative; cursor: ew-resize; touch-action: none; margin-bottom: 6px; }
+.ribbon::after { content: "RIBBON  ·  PITCH BEND"; position: absolute; left: 12px; top: 0; bottom: 0; display: flex; align-items: center; font-size: 9px; letter-spacing: .4em; color: var(--legend); pointer-events: none; }
+.ribbon .dot { position: absolute; top: 3px; bottom: 3px; width: 8px; margin-left: -4px; left: 50%; border-radius: 3px; background: var(--accent); opacity: .85; }
+.keys { position: relative; height: 112px; display: flex; user-select: none; -webkit-user-select: none; touch-action: none; }
+.key { flex: 1; border: 1px solid #222; border-radius: 0 0 4px 4px; background: linear-gradient(#f2efe6, #d9d5ca); position: relative; }
+.key.down, .bkey.down { background: var(--accent) !important; }
+.bkey { position: absolute; top: 0; height: 64%; border-radius: 0 0 3px 3px; background: linear-gradient(#2b2928, #0f0e0e); border: 1px solid #000; z-index: 2; }
+.key span { position: absolute; bottom: 5px; left: 0; right: 0; text-align: center; font-size: 9px; color: #777; }
+.pressure { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+/* ---- the library */
+.lib { padding-top: 16px; }
+.lib-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 10px; }
+.lib-head h2 { margin: 0; font-size: 11px; letter-spacing: .3em; font-weight: 400; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.slot { background: var(--panel-2); border: 1px solid var(--btn-line); border-radius: 4px; padding: 6px 7px; display: grid; grid-template-columns: 30px 1fr; gap: 2px 6px; align-items: center; cursor: pointer; min-height: 54px; }
+.slot:hover { border-color: var(--accent); }
+.slot.cur { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.slot .no { font-size: 11px; color: var(--legend); grid-row: span 2; font-variant-numeric: tabular-nums; }
+.slot .sn { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot.empty .sn { color: #5c5753; }
+.slot .acts { display: flex; gap: 4px; }
+.slot .acts button { font-size: 10px; padding: 2px 6px; }
+.note { font-size: 11px; color: var(--legend); margin-top: 8px; }
+.drop { outline: 2px dashed var(--accent); outline-offset: 4px; }
+
+dialog { background: var(--panel); color: var(--silk); border: 1px solid var(--rule); border-radius: 8px; max-width: 460px; }
+dialog::backdrop { background: rgba(0,0,0,.6); }
+dialog h3 { margin-top: 0; letter-spacing: .2em; font-size: 13px; }
+dialog label { display: block; margin: 10px 0 4px; font-size: 11px; color: var(--legend); letter-spacing: .15em; }
+dialog select { width: 100%; }
+.foot { margin-top: 16px; font-size: 11px; color: var(--legend); display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; }
+.foot a { color: var(--legend); }
+
+@media (max-width: 720px) {
+  .case { grid-template-columns: 6px 1fr 6px; padding-top: 6px; }
+  .panel { padding: 8px 10px 14px; }
+  .tones { padding-left: 0; }
+  .play { grid-template-columns: 1fr; }
+  .chan-label { width: 100%; flex-direction: row; justify-content: flex-start; }
+  .chan-label span { writing-mode: horizontal-tb; transform: none; }
+  .sl { width: 36px; } .sl .track { height: 100px; }
+}
+</style>
+</head>
+<body>
+<div class="case">
+  <div class="wood"></div>
+  <div class="panel">
+    <div class="top">
+      <div class="logo">CS-1<small>PROGRAMMER</small></div>
+      <div class="name"><label for="pname">SOUND</label><input id="pname" maxlength="24" spellcheck="false" autocomplete="off"></div>
+      <div class="group">
+        <select id="factory" class="btn" title="Load a factory sound"></select>
+        <button id="prevSound" class="btn small" title="Previous factory sound">◀</button>
+        <button id="nextSound" class="btn small" title="Next factory sound">▶</button>
+      </div>
+      <div class="group">
+        <button id="dlPatch" class="btn" title="Download this sound as a file">Download sound</button>
+        <button id="ulPatch" class="btn" title="Open a sound or a bank from a file">Open file…</button>
+      </div>
+      <div class="group">
+        <button id="audio" class="btn" title="Hear the sound in this browser (the real CS-1 engine)"><span class="led" id="audioLed"></span>Browser sound</button>
+        <button id="connect" class="btn" title="Connect the FM-1 over USB"><span class="led" id="fmLed"></span>Connect FM-1</button>
+        <button id="live" class="btn" title="Send every change to the FM-1 as you make it" disabled>Live</button>
+        <button id="getFm" class="btn" title="Read the FM-1's current sound into the editor" disabled>Get from FM-1</button>
+        <button id="sendFm" class="btn" title="Send this sound to the FM-1's panel" disabled>Send to FM-1</button>
+      </div>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+
+    <div id="chan0"></div>
+    <div id="chan1"></div>
+    <div class="strip" id="perform"></div>
+    <div class="strip" id="effects"></div>
+
+    <div class="play">
+      <div class="play-ctl">
+        <div class="group">
+          <button id="octDown" class="btn small">OCT −</button>
+          <span id="octLabel" class="val" style="min-width:42px;text-align:center">C3</span>
+          <button id="octUp" class="btn small">OCT +</button>
+        </div>
+        <div class="group">
+          <label for="playTo" style="font-size:10px;color:var(--legend);letter-spacing:.2em">PLAY TO</label>
+          <select id="playTo" class="btn">
+            <option value="browser">Browser</option>
+            <option value="fm1">FM-1</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+        <div class="group">
+          <label for="midiIn" style="font-size:10px;color:var(--legend);letter-spacing:.2em">KEYBOARD IN</label>
+          <select id="midiIn" class="btn"><option value="">none</option></select>
+        </div>
+      </div>
+      <div>
+        <div class="ribbon" id="ribbon"><div class="dot" id="ribbonDot"></div></div>
+        <div class="keys" id="keys"></div>
+      </div>
+    </div>
+
+    <div class="lib">
+      <div class="lib-head">
+        <h2>USER SLOTS</h2>
+        <div class="group">
+          <button id="readAll" class="btn" disabled title="Read all 32 user slots from the FM-1">Read all from FM-1</button>
+          <button id="writeAll" class="btn" disabled title="Write all 32 slots here to the FM-1">Write all to FM-1</button>
+          <button id="dlAll" class="btn" title="Download every slot as one file">Download all</button>
+          <button id="dlBank" class="btn" title="Download as a .cs1bank for the CS-1 browser emulator">Download .cs1bank</button>
+          <button id="ulAll" class="btn" title="Open a bank file into the slots">Open bank…</button>
+        </div>
+      </div>
+      <div class="slots" id="slots"></div>
+      <div class="note">Click a slot to load it. <b>Store</b> puts the current sound in a slot (and on the FM-1 when it is connected). Names are kept in the editor and in downloaded files; the FM-1 shows its slots as U01–U32. Drop a file anywhere on the page to open it.</div>
+    </div>
+
+    <div class="foot">
+      <span>CS-1 firmware and engine by <a href="https://github.com/twochannels/CS-1" target="_blank" rel="noopener">twochannels</a> (GPL-3.0) · editor link firmware: <span id="fwInfo">not connected</span></span>
+      <span>Keys: A–K white, W E T Y U black, Z / X octave · double-click a slider to reset it</span>
+    </div>
+  </div>
+  <div class="wood"></div>
+</div>
+
+<input type="file" id="fileIn" accept=".cs1patch,.cs1lib,.cs1bank,.syx,.json" hidden>
+<dialog id="portDlg">
+  <h3>CONNECT THE FM-1</h3>
+  <p style="color:var(--legend);margin:0">Plug the FM-1 in over USB. Pick its ports if they were not found.</p>
+  <label for="outSel">MIDI OUT (TO THE FM-1)</label><select id="outSel" class="btn"></select>
+  <label for="inSel">MIDI IN (FROM THE FM-1)</label><select id="inSel" class="btn"></select>
+  <div class="group" style="margin-top:16px;justify-content:flex-end">
+    <button class="btn" id="portCancel">Cancel</button><button class="btn on" id="portOk">Connect</button>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+// ======================================================================== the firmware's data (build.sh fills these)
+const DATA = /*@DATA@*/null;
+const WASM_B64 = "/*@WASM@*/";
+const WORKLET_SRC = /*@WORKLET@*/"";
+
+const $ = (id) => document.getElementById(id);
+const PLEN = DATA.patch_len, CLEN = DATA.chan_len, NUSER = DATA.nuser, NSOUND = DATA.sounds.length;
+const HDR = [0xF0, 0x7D, 0x43, 0x53, 0x31];
+const CMD = { HELLO: 1, GET_PANEL: 2, SET_PANEL: 3, SET_PARAM: 4, STORE: 5, GET_SLOT: 6, PUT_SLOT: 7, LOAD: 8 };
+const STATUS_TEXT = ["done", "wrong length", "a value out of range", "slot out of range", "the flash failed", "unknown command"];
+const page = (t) => DATA.pages.find((p) => p.title === t);
+const knob = (t, i) => page(t).knobs[i];
+
+// ======================================================================== the layout: the CS-80's sections
+// [section title, [[page, knob index, label override], ...]]
+const CHAN_LAYOUT = [
+  ["VCO", [["VCO", 0], ["VCO", 1], ["VCO", 2], ["VCO", 3], ["VCO 2", 0, "SPEED"], ["VCO 2", 1]]],
+  ["VCF", [["VCF", 0], ["VCF", 1], ["VCF", 2], ["VCF", 3]]],
+  ["VCF EG", [["VCF EG", 0], ["VCF EG", 1], ["VCF EG", 2], ["VCF EG", 3], ["VCA", 3, "R"]], "fenv"],
+  ["VCA", [["VCA", 0], ["VCA", 1], ["VCA", 2]]],
+  ["VCA EG", [["VCA EG", 0], ["VCA EG", 1], ["VCA EG", 2], ["VCA EG", 3]], "venv"],
+  ["TOUCH", [["TOUCH", 0], ["TOUCH", 1], ["TOUCH", 2], ["TOUCH", 3]]],
+];
+const PERFORM_LAYOUT = [
+  ["LEVERS", [["TONES", 0], ["TONES", 1], ["TONES", 2], ["TONES", 3]]],
+  ["SUB OSC", [["SUB OSC", 0], ["SUB OSC", 1], ["SUB OSC", 2], ["SUB OSC", 3], ["SUB OSC 2", 0], ["SUB OSC 2", 1]]],
+  ["TOUCH RESPONSE", [["TOUCH RESP", 0], ["TOUCH RESP", 1], ["TOUCH RESP", 2], ["TOUCH RESP", 3]]],
+  ["AUTO AFTER TOUCH", [["AUTO AT", 0], ["AUTO AT", 1], ["AUTO AT", 2], ["AUTO AT", 3]]],
+  ["PERFORM", [["PERFORM", 0], ["PERFORM", 1], ["PERFORM", 2], ["PERFORM", 3, "VINTAGE"], ["MODES", 1]]],
+  ["KEYBOARD", [["KEYBOARD", 0], ["KEYBOARD", 1], ["KEYBOARD", 2], ["KEYBOARD", 3]]],
+];
+const FX_LAYOUT = [
+  ["RING MOD", [["RING MOD", 0], ["RING MOD", 1], ["RING MOD", 2], ["RING MOD", 3]]],
+  ["DRIVE", [["DRIVE", 0], ["DRIVE", 1], ["DRIVE", 2], ["DRIVE", 3]]],
+  ["CHORUS", [["CHORUS", 0], ["CHORUS", 1], ["CHORUS", 2]]],
+  ["DELAY", [["DELAY", 0], ["DELAY", 1], ["DELAY", 2], ["DELAY", 3], ["DELAY 2", 0], ["DELAY 2", 1], ["DELAY 2", 2]]],
+  ["REVERB", [["REVERB", 0], ["REVERB", 1], ["REVERB", 2], ["SHIMMER", 0], ["SHIMMER", 1]]],
+  ["PHASER", [["PHASER", 0], ["PHASER", 1], ["PHASER", 2], ["PHASER", 3]]],
+];
+
+// ======================================================================== the state: the panel as the editor holds it
+const S = {
+  patch: Uint8Array.from(DATA.sounds[0].patch),
+  tones: DATA.sounds[0].tones.slice(),
+  name: DATA.sounds[0].name,
+  base: Uint8Array.from(DATA.sounds[0].patch),   // what the sound was when loaded: an edited knob shows orange
+  slots: new Array(NUSER).fill(null),            // {name, tones, cat, patch: number[]} or null
+  curSlot: -1,
+  octave: 4,                                     // the keyboard's lowest C is C(octave - 1)... see keyBase()
+};
+const sliders = [];                              // {off, el, def}
+const store = {
+  get(k) { try { const v = localStorage.getItem("cs1ed." + k); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set(k, v) { try { localStorage.setItem("cs1ed." + k, JSON.stringify(v)); } catch {} },
+};
+
+function say(text, kind) {
+  const s = $("status");
+  s.textContent = text;
+  s.className = "status" + (kind ? " " + kind : "");
+}
+
+// ======================================================================== value display
+function shown(k, v) {
+  const names = DATA.values[k.kind];
+  if (names) return names[v] ?? String(v);
+  if (k.kind === "bip") return v === 64 ? "0" : (v > 64 ? "+" : "") + (v - 64);
+  return String(v);
+}
+const CAP = { white: "var(--cap-white)", green: "var(--cap-green)", red: "var(--cap-red)", black: "var(--cap-black)",
+              yellow: "var(--cap-yellow)", silver: "var(--cap-silver)" };
+
+// ======================================================================== sliders
+function makeSlider(k, off, label) {
+  const el = document.createElement("div");
+  el.className = "sl";
+  el.innerHTML = `<div class="leg">${k.hi || ""}</div><div class="track" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="${k.max}"><div class="ticks"></div><div class="cap"></div></div><div class="leg">${k.lo || ""}</div><div class="val"></div><div class="nm"></div>`;
+  el.querySelector(".nm").textContent = label || k.name;
+  el.querySelector(".cap").style.setProperty("--c", CAP[k.color] || CAP.white);
+  const track = el.querySelector(".track");
+  track.setAttribute("aria-label", (label || k.name));
+  const s = { off, k, el, track, cap: el.querySelector(".cap"), val: el.querySelector(".val") };
+  const fromY = (y) => {
+    const r = track.getBoundingClientRect();
+    const t = 1 - Math.min(1, Math.max(0, (y - r.top - 7) / (r.height - 14)));
+    return Math.round(t * k.max);
+  };
+  let dragging = false, grabDy = 0;
+  track.addEventListener("pointerdown", (e) => {
+    track.setPointerCapture(e.pointerId);
+    track.focus();
+    dragging = true;
+    const capY = s.cap.getBoundingClientRect().top + 7;
+    grabDy = Math.abs(e.clientY - capY) < 10 ? e.clientY - capY : 0;   // grabbed by the cap: no jump
+    setParam(off, fromY(e.clientY - grabDy));
+    e.preventDefault();
+  });
+  track.addEventListener("pointermove", (e) => { if (dragging) setParam(off, fromY(e.clientY - grabDy)); });
+  const end = () => { if (dragging) { dragging = false; scheduleVerify(); } };
+  track.addEventListener("pointerup", end);
+  track.addEventListener("pointercancel", end);
+  track.addEventListener("dblclick", () => { setParam(off, S.base[off]); scheduleVerify(); });
+  track.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const step = (e.shiftKey ? 8 : 1) * (e.deltaY < 0 ? 1 : -1);
+    setParam(off, S.patch[off] + step); scheduleVerify();
+  }, { passive: false });
+  track.addEventListener("keydown", (e) => {
+    const big = k.max > 16 ? 8 : 1;
+    const d = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: big, PageDown: -big }[e.key];
+    if (d === undefined && e.key !== "Home" && e.key !== "End") return;
+    e.preventDefault();
+    setParam(off, e.key === "Home" ? 0 : e.key === "End" ? k.max : S.patch[off] + d);
+    scheduleVerify();
+  });
+  sliders.push(s);
+  return el;
+}
+function drawSlider(s) {
+  const v = S.patch[s.off];
+  const t = s.k.max ? v / s.k.max : 0;
+  s.cap.style.top = `calc(7px + ${(1 - t).toFixed(4)} * (100% - 14px))`;
+  s.val.textContent = shown(s.k, v);
+  s.track.setAttribute("aria-valuenow", v);
+  s.track.setAttribute("aria-valuetext", shown(s.k, v));
+  s.el.classList.toggle("changed", v !== S.base[s.off]);
+}
+
+function section(title, items, chan, env) {
+  const sec = document.createElement("div");
+  sec.className = "sec";
+  sec.innerHTML = `<h3>${title}</h3><div class="knobs"></div>`;
+  const row = sec.querySelector(".knobs");
+  for (const [pg, i, label] of items) {
+    const k = knob(pg, i);
+    const off = k.scope === "chan" ? chan * CLEN + k.off : k.off;
+    row.append(makeSlider(k, off, label));
+  }
+  if (env) {
+    const c = document.createElement("canvas");
+    c.className = "env"; c.width = 240; c.height = 80;
+    c.dataset.env = env; c.dataset.chan = chan;
+    sec.append(c);
+    envCanvases.push(c);
+  }
+  return sec;
+}
+const envCanvases = [];
+function drawEnv(c) {
+  const g = c.getContext("2d"), W = c.width, H = c.height, ch = +c.dataset.chan, p = S.patch, b = ch * CLEN;
+  const o = (name) => b + knobOff(name);
+  g.clearRect(0, 0, W, H);
+  g.strokeStyle = "rgba(143,138,130,.35)"; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(0, H - 6); g.lineTo(W, H - 6); g.stroke();
+  const pts = [];
+  const tl = (v) => 6 + (v / 127) * 70;             // a time knob's width
+  if (c.dataset.env === "venv") {
+    const a = tl(p[o("v_a")]), d = tl(p[o("v_d")]), s = p[o("v_s")] / 127, r = tl(p[o("v_r")]);
+    let x = 4; const y = (l) => H - 6 - l * (H - 14);
+    pts.push([x, y(0)], [x += a, y(1)], [x += d, y(s)], [x += 40, y(s)], [x += r, y(0)]);
+  } else {
+    const il = (p[o("f_il")] - 64) / 64, al = (p[o("f_al")] - 64) / 64;
+    const a = tl(p[o("f_a")]), d = tl(p[o("f_d")]), r = tl(p[o("f_r")]);
+    let x = 4; const y = (l) => H / 2 - l * (H / 2 - 6);
+    g.strokeStyle = "rgba(143,138,130,.35)"; g.beginPath(); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.stroke();
+    pts.push([x, y(il)], [x += a, y(al)], [x += d, y(0)], [x += 40, y(0)], [x += r, y(il)]);
+  }
+  g.strokeStyle = "#ff9a3c"; g.lineWidth = 2; g.beginPath();
+  pts.forEach(([x, yy], i) => (i ? g.lineTo(x, yy) : g.moveTo(x, yy)));
+  g.stroke();
+}
+const CHAN_FIELDS = ["feet", "wave", "pw", "pwm", "pwm_spd", "noise", "sine", "vcf_lv", "level", "hp_cut", "hp_res", "lp_cut", "lp_res",
+  "f_il", "f_al", "f_a", "f_d", "f_r", "v_a", "v_d", "v_s", "v_r", "it_brill", "it_level", "at_brill", "at_level"];
+const knobOff = (f) => CHAN_FIELDS.indexOf(f);
+
+// ======================================================================== tone buttons
+const TONE_COLORS = ["var(--tone-0)", "var(--tone-1)", "var(--tone-2)", "var(--tone-3)"];
+const toneEls = [[], []];
+function toneRow(ch) {
+  const wrap = document.createElement("div");
+  wrap.className = "tones";
+  const row = document.createElement("div");
+  row.className = "tone-row";
+  for (const t of DATA.tone_rows[ch]) {
+    const tn = DATA.tones[t];
+    const b = document.createElement("button");
+    b.className = "tbtn c" + tn.color;
+    b.style.setProperty("--tc", TONE_COLORS[tn.color]);
+    b.textContent = tn.name.replace("ELECTRIC PIANO", "E.PIANO").replace("CLAVICHORD", "CLAV").replace("HARPSICHORD", "HARPSI");
+    b.title = `${tn.name}: load this tone onto channel ${ch ? "II" : "I"} (keeps its feet and level)`;
+    b.onclick = () => loadTone(ch, t);
+    b.dataset.tone = t;
+    row.append(b);
+    toneEls[ch].push(b);
+  }
+  const more = document.createElement("select");
+  more.className = "btn tone-more";
+  more.title = "More tones: the CS-80 V conversions";
+  more.innerHTML = `<option value="">more tones…</option>` +
+    DATA.tones.map((t, i) => (i >= 22 ? `<option value="${i}">${t.name}</option>` : "")).join("");
+  more.onchange = () => { if (more.value !== "") loadTone(ch, +more.value); more.value = ""; };
+  const star = document.createElement("span");
+  star.className = "tone-star";
+  star.id = "tstar" + ch;
+  wrap.append(row, more, star);
+  return wrap;
+}
+function drawTones() {
+  for (let ch = 0; ch < 2; ch++) {
+    for (const b of toneEls[ch]) b.classList.toggle("lit", +b.dataset.tone === S.tones[ch]);
+    const t = DATA.tones[S.tones[ch]];
+    $("tstar" + ch).textContent = t ? (S.tones[ch] >= 22 ? t.name : "") + (toneEdited(ch) ? " *" : "") : "";
+    $("tstar" + ch).title = toneEdited(ch) ? "This channel's panel has moved away from its tone" : "";
+  }
+}
+function toneEdited(ch) {
+  const t = DATA.tones[S.tones[ch]].panel, keep = ["feet", "level", "at_brill", "v_a", "v_r"].map(knobOff);
+  for (let i = 0; i < CLEN; i++) if (!keep.includes(i) && t[i] !== S.patch[ch * CLEN + i]) return true;
+  return false;
+}
+function loadTone(ch, t) {
+  const panel = DATA.tones[t].panel, b = ch * CLEN;
+  const feet = S.patch[b + knobOff("feet")], level = S.patch[b + knobOff("level")];
+  for (let i = 0; i < CLEN; i++) S.patch[b + i] = panel[i];
+  S.patch[b + knobOff("feet")] = feet;
+  S.patch[b + knobOff("level")] = level;
+  S.tones[ch] = t;
+  panelChanged(true);
+  say(`Channel ${ch ? "II" : "I"}: ${DATA.tones[t].name}`);
+}
+
+// ======================================================================== building the panel
+function build() {
+  for (let ch = 0; ch < 2; ch++) {
+    const host = $("chan" + ch);
+    host.append(toneRow(ch));
+    const strip = document.createElement("div");
+    strip.className = "strip";
+    const lab = document.createElement("div");
+    lab.className = "chan-label";
+    lab.innerHTML = `<b>${ch ? "II" : "I"}</b><span>CHANNEL ${ch ? "II" : "I"}</span>`;
+    strip.append(lab);
+    for (const [t, items, env] of CHAN_LAYOUT) strip.append(section(t, items, ch, env));
+    host.append(strip);
+  }
+  for (const [t, items] of PERFORM_LAYOUT) $("perform").append(section(t, items, 0));
+  for (const [t, items] of FX_LAYOUT) $("effects").append(section(t, items, 0));
+  // the factory sounds, by category
+  const byCat = {};
+  DATA.sounds.forEach((s, i) => (byCat[s.cat] = byCat[s.cat] || []).push(i));
+  let html = `<option value="">Factory sounds…</option>`;
+  for (const c of Object.keys(byCat).sort((a, b) => a - b))
+    html += `<optgroup label="${DATA.categories[c]}">` + byCat[c].map((i) => `<option value="${i}">${DATA.sounds[i].name}</option>`).join("") + "</optgroup>";
+  $("factory").innerHTML = html;
+  buildKeys();
+  buildSlots();
+}
+function drawAll() {
+  for (const s of sliders) drawSlider(s);
+  for (const c of envCanvases) drawEnv(c);
+  drawTones();
+  $("pname").value = S.name;
+  drawSlots();
+}
+
+// ======================================================================== changing the panel
+let saveTimer = null;
+function persist() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => store.set("panel", { patch: [...S.patch], tones: S.tones, name: S.name, base: [...S.base], slot: S.curSlot }), 300);
+}
+function setParam(off, v) {
+  const s = sliders.find((x) => x.off === off);
+  const max = s ? s.k.max : 127;
+  v = Math.max(0, Math.min(max, Math.round(v)));
+  if (S.patch[off] === v) return;
+  S.patch[off] = v;
+  sliders.filter((x) => x.off === off).forEach(drawSlider);
+  for (const c of envCanvases) drawEnv(c);
+  drawTones();
+  engineParam(off, v);
+  if (fm.live) fmParam(off, v);
+  persist();
+}
+// a whole new panel (a sound, a tone, a file): the engine and a live FM-1 get it at once
+function panelChanged(keepBase) {
+  if (!keepBase) S.base = Uint8Array.from(S.patch);
+  drawAll();
+  enginePanel();
+  if (fm.live) fmPanel();
+  persist();
+}
+function loadSound(name, tones, patch, slot = -1) {
+  S.patch = Uint8Array.from(patch);
+  S.tones = tones.slice();
+  S.name = name;
+  S.curSlot = slot;
+  panelChanged(false);
+}
+
+// ======================================================================== frames
+const frame = (cmd, data = []) => Uint8Array.from([...HDR, cmd, ...Array.from(data, (d) => d & 0x7F), 0xF7]);
+const panelFrame = () => frame(CMD.SET_PANEL, [S.tones[0], S.tones[1], ...S.patch]);
+const paramFrame = (off, v) => frame(CMD.SET_PARAM, [off & 0x7F, off >> 7, v]);
+
+// ======================================================================== the engine in the browser
+const eng = { node: null, ctx: null, gain: null, on: false, starting: null };
+async function engineStart() {
+  if (eng.starting) return eng.starting;
+  eng.starting = (async () => {
+    const ctx = new AudioContext({ sampleRate: 44100, latencyHint: "interactive" });
+    // the worklet from a blob: URL on a web server; a page opened from disk (origin "null") needs a data: URL
+    try { await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET_SRC], { type: "text/javascript" }))); }
+    catch { await ctx.audioWorklet.addModule("data:text/javascript;base64," + btoa(unescape(encodeURIComponent(WORKLET_SRC)))); }
+    const node = new AudioWorkletNode(ctx, "cs1-editor", { numberOfInputs: 0, outputChannelCount: [2] });
+    const gain = ctx.createGain();
+    gain.gain.value = 1;
+    node.connect(gain).connect(ctx.destination);
+    const bin = Uint8Array.from(atob(WASM_B64), (c) => c.charCodeAt(0));
+    await new Promise((resolve, reject) => {
+      node.port.onmessage = (e) => {
+        if (e.data.type === "ready") resolve();
+        else if (e.data.type === "error") reject(new Error(e.data.message));
+      };
+      node.port.postMessage({ type: "load", wasm: bin.buffer }, [bin.buffer]);
+    });
+    Object.assign(eng, { node, ctx, gain });
+    enginePanel();
+  })();
+  return eng.starting;
+}
+function engineSend(f) { if (eng.node) eng.node.port.postMessage({ type: "sysex", data: f }); }
+function enginePanel() { engineSend(panelFrame()); }
+function engineParam(off, v) { engineSend(paramFrame(off, v)); }
+function engineMidi(d) { if (eng.node && eng.on) eng.node.port.postMessage({ type: "midi", data: d }); }
+$("audio").onclick = async () => {
+  try {
+    if (!eng.on) {
+      await engineStart();
+      await eng.ctx.resume();
+      eng.on = true;
+      say("Browser sound on: play the keys below, or your computer keyboard (A–K).", "ok");
+    } else {
+      eng.on = false;
+      allNotesOff("browser");
+      await eng.ctx.suspend();
+      say("Browser sound off.");
+    }
+  } catch (err) { say("Could not start the browser sound: " + err.message, "bad"); }
+  $("audioLed").classList.toggle("on", eng.on);
+  $("audio").classList.toggle("on", false);
+};
+
+// ======================================================================== the FM-1 over Web MIDI
+const fm = { access: null, out: null, in: null, ok: false, live: false, waiting: null, chain: Promise.resolve(), pend: new Map(), timer: null, info: null };
+function fmRaw(f) { if (fm.out) fm.out.send(f); }
+function fmOnMessage(e) {
+  const d = e.data;
+  if (d[0] !== 0xF0) { return; }
+  for (let i = 0; i < 5; i++) if (d[i] !== HDR[i]) return;
+  const cmd = d[5], body = Array.from(d.subarray(6, d.length - 1));
+  if (cmd === 0x7F && body[0] === CMD.SET_PARAM) { say("The FM-1 refused a change: " + STATUS_TEXT[body[1]], "bad"); return; }
+  const w = fm.waiting;
+  if (w && w.want(cmd, body)) { fm.waiting = null; clearTimeout(w.timer); w.resolve(body); }
+}
+// one request at a time: send, wait for its reply (one retry: the FM-1 drops a frame that lands while it is busy)
+function fmAsk(f, want, ms = 1500) {
+  const run = () => new Promise((resolve, reject) => {
+    let tries = 0;
+    const go = () => {
+      fm.waiting = { want, resolve, timer: setTimeout(() => {
+        if (++tries < 2) go();
+        else { fm.waiting = null; reject(new Error("the FM-1 did not answer")); }
+      }, ms) };
+      fmRaw(f);
+    };
+    go();
+  });
+  const p = fm.chain.then(run, run);
+  fm.chain = p.catch(() => {});
+  return p;
+}
+const reply = (code) => (cmd) => cmd === code;
+const ack = (code) => (cmd, body) => cmd === 0x7F && body[0] === code;
+async function fmCommand(f, code, what) {
+  const b = await fmAsk(f, ack(code), code === CMD.PUT_SLOT || code === CMD.STORE ? 3000 : 1500);
+  if (b[1] !== 0) throw new Error(`${what}: ${STATUS_TEXT[b[1]] || "error " + b[1]}`);
+}
+function fmPanel() { return fm.ok ? fmCommand(panelFrame(), CMD.SET_PANEL, "Sending the sound").catch((e) => say(e.message, "bad")) : null; }
+// live knobs: the latest value of each moved knob, one frame every 12 ms (a drag is a stream; the FM-1 takes them one at a time)
+function fmParam(off, v) {
+  if (!fm.ok) return;
+  fm.pend.set(off, v);
+  if (!fm.timer) fm.timer = setInterval(() => {
+    if (fm.waiting) return;                         // a request in flight: its reply first
+    const it = fm.pend.entries().next();
+    if (it.done) { clearInterval(fm.timer); fm.timer = null; return; }
+    const [o, val] = it.value;
+    fm.pend.delete(o);
+    fmRaw(paramFrame(o, val));
+  }, 12);
+}
+// after a gesture: read the FM-1's panel back and resend the whole sound if a frame went missing on the way
+let verifyTimer = null;
+function scheduleVerify() {
+  if (!fm.live || !fm.ok) return;
+  clearTimeout(verifyTimer);
+  verifyTimer = setTimeout(async () => {
+    if (fm.pend.size) { scheduleVerify(); return; }
+    try {
+      const b = await fmAsk(frame(CMD.GET_PANEL), reply(0x42));
+      const p = b.slice(3);
+      if (p.length !== PLEN || p.some((v, i) => v !== S.patch[i]) || b[0] !== S.tones[0] || b[1] !== S.tones[1]) await fmPanel();
+    } catch {}
+  }, 450);
+}
+function portName(p) { return `${p.name}${p.manufacturer ? " (" + p.manufacturer + ")" : ""}`; }
+function fillPorts(sel, ports, re) {
+  sel.innerHTML = "";
+  let pick = "";
+  for (const p of ports.values()) {
+    const o = document.createElement("option");
+    o.value = p.id; o.textContent = portName(p);
+    sel.append(o);
+    if (!pick && re.test(p.name)) pick = p.id;
+  }
+  if (pick) sel.value = pick;
+  return !!pick;
+}
+async function fmConnect(outId, inId) {
+  if (fm.in) fm.in.onmidimessage = null;
+  fm.out = fm.access.outputs.get(outId);
+  fm.in = fm.access.inputs.get(inId);
+  if (!fm.out || !fm.in) { fmSet(false); say("Pick the FM-1's MIDI ports.", "bad"); return; }
+  fm.in.onmidimessage = fmOnMessage;
+  try {
+    const b = await fmAsk(frame(CMD.HELLO), reply(0x41), 1200);
+    const len = b[1] | (b[2] << 7), ver = String.fromCharCode(...b.slice(6));
+    fm.info = { len, ver, nuser: b[3], nsound: b[4] };
+    if (len !== PLEN) { fmSet(false); say(`The FM-1 runs CS-1 ${ver} with ${len}-byte sounds; this editor is for ${DATA.version} (${PLEN}). Update one of them.`, "bad"); return; }
+    fmSet(true);
+    $("fwInfo").textContent = `CS-1 ${ver} on ${fm.out.name}`;
+    say(`Connected: CS-1 ${ver}. "Get from FM-1" reads its sound; "Live" sends every change as you make it.`, "ok");
+    store.set("ports", { out: fm.out.name, in: fm.in.name });
+  } catch {
+    fmSet(false);
+    say("The FM-1 did not answer. Is the editor-link firmware installed, and are these its ports?", "bad");
+  }
+}
+function fmSet(ok) {
+  fm.ok = ok;
+  if (!ok) { fm.live = false; }
+  $("fmLed").classList.toggle("on", ok);
+  for (const id of ["live", "getFm", "sendFm", "readAll", "writeAll"]) $(id).disabled = !ok;
+  $("live").classList.toggle("on", fm.live);
+  drawSlots();
+}
+$("connect").onclick = async () => {
+  if (!navigator.requestMIDIAccess) { say("This browser has no Web MIDI: use Chrome or Edge.", "bad"); return; }
+  try { fm.access = fm.access || await navigator.requestMIDIAccess({ sysex: true }); }
+  catch { say("MIDI was not allowed. Allow MIDI and SysEx for this page (the padlock in the address bar), then try again.", "bad"); return; }
+  const re = /fm-?1|cs-?1|felucca|dinghy|m-?vave/i;
+  const okOut = fillPorts($("outSel"), fm.access.outputs, re), okIn = fillPorts($("inSel"), fm.access.inputs, re);
+  fillMidiIn();
+  if (!fm.access.outputs.size) { say("No MIDI devices found. Is the FM-1 plugged in and switched on?", "bad"); return; }
+  if (okOut && okIn) { fmConnect($("outSel").value, $("inSel").value); return; }
+  $("portDlg").showModal();
+};
+$("portCancel").onclick = () => $("portDlg").close();
+$("portOk").onclick = () => { $("portDlg").close(); fmConnect($("outSel").value, $("inSel").value); };
+$("live").onclick = () => {
+  fm.live = !fm.live;
+  $("live").classList.toggle("on", fm.live);
+  if (fm.live) { fmPanel(); say("Live: every change goes to the FM-1 as you make it.", "ok"); }
+  else say("Live off: use “Send to FM-1” when the sound is ready.");
+};
+$("getFm").onclick = async () => {
+  try {
+    const b = await fmAsk(frame(CMD.GET_PANEL), reply(0x42));
+    const idx = b[2];
+    const name = idx < NSOUND ? DATA.sounds[idx].name : idx < NSOUND + NUSER ? (S.slots[idx - NSOUND]?.name || "U" + String(idx - NSOUND + 1).padStart(2, "0")) : "FROM FM-1";
+    S.patch = Uint8Array.from(b.slice(3)); S.tones = [b[0], b[1]]; S.name = name; S.curSlot = idx >= NSOUND ? idx - NSOUND : -1;
+    S.base = Uint8Array.from(S.patch);
+    drawAll(); enginePanel(); persist();
+    say(`Read the FM-1's sound (${name}).`, "ok");
+  } catch (e) { say(e.message, "bad"); }
+};
+$("sendFm").onclick = async () => {
+  try { await fmCommand(panelFrame(), CMD.SET_PANEL, "Sending the sound"); say("Sent to the FM-1's panel. Use Store on a slot to keep it.", "ok"); }
+  catch (e) { say(e.message, "bad"); }
+};
+
+// ======================================================================== the keyboard, the ribbon, a MIDI keyboard in
+const held = new Set();
+function playTo() { return $("playTo").value; }
+function midiOut(d, to = playTo()) {
+  if (to !== "fm1") engineMidi(d);
+  if (to !== "browser" && fm.out) fm.out.send(d);
+}
+function noteOn(n) { if (held.has(n)) return; held.add(n); midiOut([0x90, n, 100]); keyLight(n, true); }
+function noteOff(n) { if (!held.has(n)) return; held.delete(n); midiOut([0x80, n, 0]); keyLight(n, false); }
+function allNotesOff(to) { for (const n of held) midiOut([0x80, n, 0], to); held.clear(); document.querySelectorAll(".down").forEach((e) => e.classList.remove("down")); }
+const keyBase = () => 12 * S.octave;                 // MIDI note of the keyboard's first C (C3 = 48 at octave 4)
+const NKEYS = 37;
+const keyEls = new Map();
+function buildKeys() {
+  const host = $("keys");
+  host.innerHTML = "";
+  keyEls.clear();
+  const whites = [];
+  for (let i = 0; i < NKEYS; i++) if (![1, 3, 6, 8, 10].includes(i % 12)) whites.push(i);
+  const wW = 100 / whites.length;
+  whites.forEach((i) => {
+    const k = document.createElement("div");
+    k.className = "key"; k.dataset.i = i;
+    if (i % 12 === 0) k.innerHTML = `<span>C${Math.floor((keyBase() + i) / 12) - 1}</span>`;
+    host.append(k); keyEls.set(i, k);
+  });
+  for (let i = 0; i < NKEYS; i++) {
+    if (![1, 3, 6, 8, 10].includes(i % 12)) continue;
+    const k = document.createElement("div");
+    k.className = "bkey"; k.dataset.i = i;
+    const wi = whites.indexOf(i - 1);
+    k.style.left = `calc(${(wi + 1) * wW}% - ${wW * 0.3}%)`;
+    k.style.width = `${wW * 0.6}%`;
+    host.append(k); keyEls.set(i, k);
+  }
+  $("octLabel").textContent = "C" + (S.octave - 1);
+  const ptrNote = new Map();
+  const at = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.dataset.i !== undefined && host.contains(el) ? keyBase() + +el.dataset.i : null; };
+  host.onpointerdown = (e) => { host.setPointerCapture(e.pointerId); const n = at(e); if (n !== null) { ptrNote.set(e.pointerId, n); noteOn(n); } e.preventDefault(); };
+  host.onpointermove = (e) => { if (!ptrNote.has(e.pointerId)) return; const n = at(e), was = ptrNote.get(e.pointerId); if (n !== was) { noteOff(was); if (n !== null) noteOn(n); ptrNote.set(e.pointerId, n); } };
+  const up = (e) => { const n = ptrNote.get(e.pointerId); if (n !== undefined) { if (n !== null) noteOff(n); ptrNote.delete(e.pointerId); } };
+  host.onpointerup = up; host.onpointercancel = up;
+}
+function keyLight(n, on) { const el = keyEls.get(n - keyBase()); if (el) el.classList.toggle("down", on); }
+$("octDown").onclick = () => { allNotesOff(); S.octave = Math.max(1, S.octave - 1); buildKeys(); };
+$("octUp").onclick = () => { allNotesOff(); S.octave = Math.min(7, S.octave + 1); buildKeys(); };
+const PC_KEYS = { a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12, o: 13, l: 14, p: 15, ";": 16 };
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === "INPUT" || tag === "SELECT" || (document.activeElement && document.activeElement.getAttribute("role") === "slider")) return;
+  const k = e.key.toLowerCase();
+  if (k === "z") { $("octDown").click(); return; }
+  if (k === "x") { $("octUp").click(); return; }
+  if (k in PC_KEYS) { noteOn(keyBase() + 12 + PC_KEYS[k]); e.preventDefault(); }
+});
+document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if (k in PC_KEYS) noteOff(keyBase() + 12 + PC_KEYS[k]); });
+window.addEventListener("blur", () => allNotesOff());
+// the ribbon: pitch bend, back to centre when let go
+(() => {
+  const r = $("ribbon"), dot = $("ribbonDot");
+  let on = false;
+  const send = (t) => { const v = Math.round(8192 + t * 8191); midiOut([0xE0, v & 0x7F, (v >> 7) & 0x7F]); dot.style.left = (50 + t * 50) + "%"; };
+  const fromX = (e) => { const b = r.getBoundingClientRect(); return Math.max(-1, Math.min(1, ((e.clientX - b.left) / b.width) * 2 - 1)); };
+  r.onpointerdown = (e) => { on = true; r.setPointerCapture(e.pointerId); send(fromX(e)); };
+  r.onpointermove = (e) => { if (on) send(fromX(e)); };
+  r.onpointerup = r.onpointercancel = () => { on = false; send(0); };
+})();
+// a MIDI keyboard into the editor: its notes, bends and CCs go wherever PLAY TO says
+function fillMidiIn() {
+  if (!fm.access) return;
+  const sel = $("midiIn"), cur = sel.value;
+  sel.innerHTML = `<option value="">none</option>` + [...fm.access.inputs.values()].map((p) => `<option value="${p.id}">${portName(p)}</option>`).join("");
+  sel.value = cur;
+}
+let kbIn = null;
+$("midiIn").onfocus = async () => {
+  if (!fm.access && navigator.requestMIDIAccess) {
+    try { fm.access = await navigator.requestMIDIAccess({ sysex: true }); fillMidiIn(); } catch {}
+  }
+};
+$("midiIn").onchange = () => {
+  if (kbIn && kbIn !== fm.in) kbIn.onmidimessage = null;
+  kbIn = $("midiIn").value ? fm.access.inputs.get($("midiIn").value) : null;
+  if (!kbIn) return;
+  if (kbIn === fm.in) { say("That is the FM-1 itself: pick your keyboard.", "bad"); kbIn = null; $("midiIn").value = ""; return; }
+  kbIn.onmidimessage = (e) => { const d = e.data; if (d[0] >= 0x80 && d[0] < 0xF0) midiOut(Array.from(d)); };
+  say(`Playing from ${kbIn.name}.`, "ok");
+};
+
+// ======================================================================== the user slots
+function buildSlots() {
+  const host = $("slots");
+  host.innerHTML = "";
+  for (let i = 0; i < NUSER; i++) {
+    const el = document.createElement("div");
+    el.className = "slot";
+    el.innerHTML = `<div class="no">U${String(i + 1).padStart(2, "0")}</div><div class="sn"></div><div class="acts"><button class="btn small" data-a="store">Store</button><button class="btn small" data-a="rename">Name</button></div>`;
+    el.onclick = (e) => {
+      const a = e.target.dataset && e.target.dataset.a;
+      if (a === "store") storeSlot(i);
+      else if (a === "rename") renameSlot(i);
+      else if (S.slots[i]) { const s = S.slots[i]; loadSound(s.name, s.tones, s.patch, i); say(`Loaded U${String(i + 1).padStart(2, "0")} ${s.name}.`); }
+    };
+    host.append(el);
+  }
+}
+function drawSlots() {
+  const els = $("slots").children;
+  for (let i = 0; i < els.length; i++) {
+    const s = S.slots[i], el = els[i];
+    el.classList.toggle("empty", !s);
+    el.classList.toggle("cur", S.curSlot === i);
+    el.querySelector(".sn").textContent = s ? s.name : "— empty —";
+    el.querySelector('[data-a="rename"]').disabled = !s;
+  }
+}
+const slotName = (i) => "U" + String(i + 1).padStart(2, "0");
+async function storeSlot(i) {
+  if (S.slots[i] && !confirm(`Replace ${slotName(i)} ${S.slots[i].name} with ${S.name}?`)) return;
+  const entry = { name: (S.name || slotName(i)).toUpperCase(), tones: S.tones.slice(), cat: 0, patch: [...S.patch] };
+  S.slots[i] = entry; S.curSlot = i; S.base = Uint8Array.from(S.patch);
+  saveSlots(); drawAll(); persist();
+  if (fm.ok) {
+    try { await fmCommand(slotFrame(i, entry), CMD.PUT_SLOT, `Storing ${slotName(i)}`); say(`Stored in ${slotName(i)}, here and on the FM-1.`, "ok"); }
+    catch (e) { say(e.message + " (kept here; try again)", "bad"); }
+  } else say(`Stored in ${slotName(i)} here. Connect the FM-1 and use “Write all” (or Store again) to put it on the device.`, "ok");
+}
+function renameSlot(i) {
+  const s = S.slots[i]; if (!s) return;
+  const n = prompt(`Name for ${slotName(i)}:`, s.name);
+  if (n === null) return;
+  s.name = n.trim().toUpperCase().slice(0, 24) || slotName(i);
+  if (S.curSlot === i) { S.name = s.name; $("pname").value = s.name; persist(); }
+  saveSlots(); drawSlots();
+}
+const slotFrame = (i, s) => frame(CMD.PUT_SLOT, [i, s.tones[0], s.tones[1], s.cat || 0, ...s.patch]);
+function saveSlots() { store.set("slots", S.slots); }
+$("readAll").onclick = async () => {
+  if (S.slots.some(Boolean) && !confirm("Replace the slots here with the FM-1's 32 user slots? (Names here are kept for slots that did not change.)")) return;
+  try {
+    for (let i = 0; i < NUSER; i++) {
+      say(`Reading ${slotName(i)}…`);
+      const b = await fmAsk(frame(CMD.GET_SLOT, [i]), (cmd, body) => cmd === 0x46 && body[0] === i);
+      if (!b[1]) { S.slots[i] = null; continue; }
+      const patch = b.slice(5), old = S.slots[i];
+      const same = old && old.patch.every((v, k) => v === patch[k]);
+      S.slots[i] = { name: same ? old.name : slotName(i), tones: [b[2], b[3]], cat: b[4], patch };
+    }
+    saveSlots(); drawSlots();
+    say(`Read all ${NUSER} slots from the FM-1 (${S.slots.filter(Boolean).length} in use).`, "ok");
+  } catch (e) { say(e.message, "bad"); saveSlots(); drawSlots(); }
+};
+$("writeAll").onclick = async () => {
+  const used = S.slots.map((s, i) => (s ? i : -1)).filter((i) => i >= 0);
+  if (!used.length) { say("No slots here to write.", "bad"); return; }
+  if (!confirm(`Write ${used.length} slot(s) to the FM-1? Each replaces what the FM-1 has in that slot. (Empty slots here leave the FM-1's alone.)`)) return;
+  try {
+    for (const i of used) { say(`Writing ${slotName(i)}…`); await fmCommand(slotFrame(i, S.slots[i]), CMD.PUT_SLOT, `Writing ${slotName(i)}`); }
+    say(`Wrote ${used.length} slot(s) to the FM-1.`, "ok");
+  } catch (e) { say(e.message, "bad"); }
+};
+
+// ======================================================================== files: download and open
+function download(name, data, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([data], { type }));
+  a.download = name;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const safe = (s) => (s || "sound").trim().replace(/[^A-Za-z0-9 _.-]+/g, "").replace(/\s+/g, "-").toLowerCase() || "sound";
+const patchJson = (name, tones, patch, cat = 0) => ({ name, tones, cat, patch: [...patch] });
+$("dlPatch").onclick = () => {
+  const doc = { format: "cs1-patch", version: 1, firmware: DATA.version, patch_len: PLEN, ...patchJson(S.name, S.tones, S.patch) };
+  download(safe(S.name) + ".cs1patch", JSON.stringify(doc, null, 1), "application/json");
+  say(`Downloaded ${safe(S.name)}.cs1patch.`, "ok");
+};
+$("dlAll").onclick = () => {
+  const doc = { format: "cs1-library", version: 1, firmware: DATA.version, patch_len: PLEN, slots: S.slots };
+  download("cs1-slots.cs1lib", JSON.stringify(doc, null, 1), "application/json");
+  say("Downloaded all 32 slots as cs1-slots.cs1lib.", "ok");
+};
+// the CS-1 emulator's own bank file: 32 slots of 128 bytes {magic A7, tone I, tone II, layout 1, category, patch}
+$("dlBank").onclick = () => {
+  const b = new Uint8Array(4096);
+  S.slots.forEach((s, i) => { if (!s) return; const o = i * 128; b.set([0xA7, s.tones[0], s.tones[1], 1, s.cat || 0], o); b.set(s.patch, o + 5); });
+  download("cs1-presets.cs1bank", b, "application/octet-stream");
+  say("Downloaded cs1-presets.cs1bank (opens in the CS-1 browser emulator's Import).", "ok");
+};
+let fileTarget = "any";
+$("ulPatch").onclick = () => { fileTarget = "any"; $("fileIn").click(); };
+$("ulAll").onclick = () => { fileTarget = "bank"; $("fileIn").click(); };
+$("fileIn").onchange = async (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) openFile(f); };
+document.addEventListener("dragover", (e) => { e.preventDefault(); document.body.classList.add("drop"); });
+document.addEventListener("dragleave", (e) => { if (e.target === document.documentElement || e.target === document.body) document.body.classList.remove("drop"); });
+document.addEventListener("drop", (e) => { e.preventDefault(); document.body.classList.remove("drop"); const f = e.dataTransfer.files[0]; if (f) { fileTarget = "any"; openFile(f); } });
+
+function validPatch(p) {
+  if (!Array.isArray(p) && !(p instanceof Uint8Array)) return false;
+  if (p.length !== PLEN) return false;
+  for (const s of sliders) if (!(p[s.off] >= 0 && p[s.off] <= s.k.max)) return false;
+  return Array.from(p).every((v) => Number.isInteger(v) && v >= 0 && v <= 127);
+}
+const validTones = (t) => Array.isArray(t) && t.length === 2 && t.every((v) => Number.isInteger(v) && v >= 0 && v < DATA.tones.length);
+function takeSlots(list, from) {
+  const n = list.filter(Boolean).length;
+  if (S.slots.some(Boolean) && !confirm(`Replace the slots here with the ${n} sound(s) in ${from}?`)) return;
+  for (let i = 0; i < NUSER; i++) S.slots[i] = list[i] || null;
+  saveSlots(); drawSlots();
+  say(`Opened ${n} sound(s) from ${from} into the slots.` + (fm.ok ? " “Write all to FM-1” puts them on the device." : ""), "ok");
+}
+async function openFile(f) {
+  try {
+    const buf = new Uint8Array(await f.arrayBuffer());
+    const name = f.name.toLowerCase();
+    if (name.endsWith(".cs1bank") || (buf.length === 4096 && buf[0] !== 0x7B)) {        // the emulator's bank
+      if (buf.length !== 4096) throw new Error("not a CS-1 bank (it should be 4096 bytes)");
+      const list = [];
+      for (let i = 0; i < NUSER; i++) {
+        const o = i * 128;
+        if (buf[o] !== 0xA7) { list.push(null); continue; }
+        const patch = Array.from(buf.subarray(o + 5, o + 5 + PLEN));
+        if (!buf[o + 3]) { patch[103] = 0; patch[106] = 64; patch[104] = 64; patch[105] = 64; }   // an older slot: drive and EQ at rest
+        list.push(validPatch(patch) ? { name: slotName(i), tones: [buf[o + 1] % DATA.tones.length, buf[o + 2] % DATA.tones.length], cat: buf[o + 4], patch } : null);
+      }
+      takeSlots(list, f.name);
+      return;
+    }
+    if (buf[0] === 0xF0) {                                                              // SysEx: our frames
+      const frames = [];
+      for (let i = 0; i < buf.length; i++) if (buf[i] === 0xF0) { const j = buf.indexOf(0xF7, i); if (j < 0) break; frames.push(buf.subarray(i, j + 1)); i = j; }
+      const list = new Array(NUSER).fill(null);
+      let panel = null, slots = 0;
+      for (const fr of frames) {
+        if (HDR.some((v, k) => fr[k] !== v)) continue;
+        const cmd = fr[5], d = Array.from(fr.subarray(6, fr.length - 1));
+        if (cmd === CMD.SET_PANEL && d.length === 2 + PLEN) panel = { tones: d.slice(0, 2), patch: d.slice(2) };
+        if ((cmd === CMD.PUT_SLOT || cmd === 0x46) && d.length >= 4 + PLEN) {
+          const off = cmd === 0x46 ? 2 : 1;
+          const patch = d.slice(cmd === 0x46 ? 5 : 4);
+          if (d[0] < NUSER && validPatch(patch)) { list[d[0]] = { name: slotName(d[0]), tones: [d[off], d[off + 1]], cat: d[off + 2], patch }; slots++; }
+        }
+      }
+      if (slots) takeSlots(list, f.name);
+      else if (panel && validPatch(panel.patch) && validTones(panel.tones)) { loadSound(f.name.replace(/\.syx$/i, "").toUpperCase(), panel.tones, panel.patch); say(`Opened ${f.name}.`, "ok"); }
+      else throw new Error("no CS-1 sounds in this .syx");
+      return;
+    }
+    const doc = JSON.parse(new TextDecoder().decode(buf));
+    if (doc.patch_len && doc.patch_len !== PLEN) throw new Error(`made for ${doc.patch_len}-byte sounds (firmware ${doc.firmware}); this editor uses ${PLEN}`);
+    if (doc.format === "cs1-patch" || (doc.patch && !doc.slots)) {
+      if (!validPatch(doc.patch) || !validTones(doc.tones)) throw new Error("the sound in it is damaged");
+      if (fileTarget === "bank") throw new Error("that is one sound: use “Open file…” at the top");
+      loadSound(String(doc.name || "SOUND").toUpperCase().slice(0, 24), doc.tones, doc.patch);
+      say(`Opened ${doc.name || f.name}.`, "ok");
+      return;
+    }
+    if (doc.format === "cs1-library" || Array.isArray(doc.slots)) {
+      const list = [];
+      for (let i = 0; i < NUSER; i++) {
+        const s = doc.slots[i];
+        list.push(s && validPatch(s.patch) && validTones(s.tones) ? { name: String(s.name || slotName(i)).toUpperCase().slice(0, 24), tones: s.tones, cat: s.cat | 0, patch: s.patch.slice() } : null);
+      }
+      takeSlots(list, f.name);
+      return;
+    }
+    throw new Error("not a CS-1 sound or bank");
+  } catch (err) { say(`Could not open ${f.name}: ${err.message}`, "bad"); }
+}
+
+// ======================================================================== the rest of the top bar
+$("pname").oninput = () => { S.name = $("pname").value.toUpperCase(); persist(); };
+$("pname").onblur = () => { $("pname").value = S.name; };
+$("factory").onchange = () => { const v = $("factory").value; if (v === "") return; const s = DATA.sounds[+v]; loadSound(s.name, s.tones, s.patch); say(`${s.name} (${DATA.categories[s.cat]})`); };
+const stepSound = (d) => {
+  const cur = DATA.sounds.findIndex((s) => s.name === S.name);
+  const i = ((cur < 0 ? (d > 0 ? -1 : 0) : cur) + d + NSOUND) % NSOUND;
+  $("factory").value = String(i); $("factory").onchange();
+};
+$("prevSound").onclick = () => stepSound(-1);
+$("nextSound").onclick = () => stepSound(1);
+
+// ======================================================================== start
+(function start() {
+  build();
+  const saved = store.get("panel");
+  if (saved && validPatch(saved.patch) && validTones(saved.tones)) {
+    S.patch = Uint8Array.from(saved.patch); S.tones = saved.tones; S.name = saved.name || "SOUND";
+    S.base = Uint8Array.from(validPatch(saved.base) ? saved.base : saved.patch); S.curSlot = saved.slot ?? -1;
+  }
+  const slots = store.get("slots");
+  if (Array.isArray(slots)) for (let i = 0; i < NUSER; i++) { const s = slots[i]; S.slots[i] = s && validPatch(s.patch) && validTones(s.tones) ? s : null; }
+  drawAll();
+  if (!WASM_B64 || WASM_B64.startsWith("/*")) $("audio").disabled = true;
+  say("Click “Browser sound” to hear it here, or “Connect FM-1” to program the FM-1.");
+})();
+</script>
+</body>
+</html>
