@@ -92,6 +92,19 @@ with sync_playwright() as p:
     check("32 user slots", pg.locator(".slot").count() == 32)
     pg.screenshot(path=f"{OUT}/desktop.png", full_page=True)
 
+    # ---- ◀ ▶ walk the factory menu in the order it shows (grouped by category), and wrap round
+    shown = pg.eval_on_selector_all("#factory option", "os => os.map(o => o.textContent).filter((t, i) => i > 0)")
+    pg.select_option("#factory", label=shown[0])
+    seen = [pg.input_value("#pname")]
+    for _ in range(len(shown)):
+        pg.click("#nextSound"); seen.append(pg.input_value("#pname"))
+    check("▶ steps down the menu as shown, one sound at a time, and wraps to the top", seen == shown + [shown[0]])
+    back = [pg.input_value("#pname")]
+    for _ in range(3):
+        pg.click("#prevSound"); back.append(pg.input_value("#pname"))
+    check("◀ steps back up it (wrapping to the bottom)", back == [shown[0], shown[-1], shown[-2], shown[-3]])
+    check("the menu shows the sound ◀ ▶ landed on", pg.eval_on_selector("#factory", "s => s.options[s.selectedIndex].textContent") == shown[-3])
+
     # ---- the browser's sound: the real engine plays a note
     pg.click("#audio")
     pg.wait_for_function("document.querySelector('#audioLed').classList.contains('on')", timeout=8000)

@@ -272,6 +272,7 @@ const S = {
   base: Uint8Array.from(DATA.sounds[0].patch),   // what the sound was when loaded: an edited knob shows orange
   slots: new Array(NUSER).fill(null),            // {name, tones, cat, patch: number[]} or null
   curSlot: -1,
+  factory: 0,                                    // the factory sound loaded (an index in DATA.sounds), -1 for a slot or a file
   octave: 4,                                     // the keyboard's lowest C is C(octave - 1)... see keyBase()
 };
 const sliders = [];                              // {off, el, def}
@@ -471,6 +472,7 @@ function loadTone(ch, t) {
 }
 
 // ======================================================================== building the panel
+const FACTORY_ORDER = [];                          // the factory sounds in the order the menu shows them (by category)
 function build() {
   for (let ch = 0; ch < 2; ch++) {
     const host = $("chan" + ch);
@@ -490,6 +492,8 @@ function build() {
   const byCat = {};
   DATA.sounds.forEach((s, i) => (byCat[s.cat] = byCat[s.cat] || []).push(i));
   let html = `<option value="">Factory sounds…</option>`;
+  FACTORY_ORDER.length = 0;
+  for (const c of Object.keys(byCat).sort((a, b) => a - b)) FACTORY_ORDER.push(...byCat[c]);   // the list as it is shown: ◀ ▶ step along it
   for (const c of Object.keys(byCat).sort((a, b) => a - b))
     html += `<optgroup label="${DATA.categories[c]}">` + byCat[c].map((i) => `<option value="${i}">${DATA.sounds[i].name}</option>`).join("") + "</optgroup>";
   $("factory").innerHTML = html;
@@ -508,7 +512,7 @@ function drawAll() {
 let saveTimer = null;
 function persist() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => store.set("panel", { patch: [...S.patch], tones: S.tones, name: S.name, base: [...S.base], slot: S.curSlot }), 300);
+  saveTimer = setTimeout(() => store.set("panel", { patch: [...S.patch], tones: S.tones, name: S.name, base: [...S.base], slot: S.curSlot, factory: S.factory }), 300);
 }
 function setParam(off, v) {
   const s = sliders.find((x) => x.off === off);
@@ -531,7 +535,9 @@ function panelChanged(keepBase) {
   if (fm.live) fmPanel();
   persist();
 }
-function loadSound(name, tones, patch, slot = -1) {
+function loadSound(name, tones, patch, slot = -1, factory = -1) {
+  S.factory = factory;
+  $("factory").value = factory >= 0 ? String(factory) : "";
   S.patch = Uint8Array.from(patch);
   S.tones = tones.slice();
   S.name = name;
@@ -722,6 +728,7 @@ $("getFm").onclick = async () => {
     const name = idx < NSOUND ? DATA.sounds[idx].name : idx < NSOUND + NUSER ? (S.slots[idx - NSOUND]?.name || "U" + String(idx - NSOUND + 1).padStart(2, "0")) : "FROM FM-1";
     S.patch = Uint8Array.from(b.slice(3)); S.tones = [b[0], b[1]]; S.name = name; S.curSlot = idx >= NSOUND ? idx - NSOUND : -1;
     S.base = Uint8Array.from(S.patch);
+    S.factory = idx < NSOUND ? idx : -1; $("factory").value = S.factory >= 0 ? String(idx) : "";
     drawAll(); enginePanel(); persist();
     say(`Read the FM-1's sound (${name}).`, "ok");
   } catch (e) { say(e.message, "bad"); }
@@ -1005,11 +1012,13 @@ async function openFile(f) {
 // ======================================================================== the rest of the top bar
 $("pname").oninput = () => { S.name = $("pname").value.toUpperCase(); persist(); };
 $("pname").onblur = () => { $("pname").value = S.name; };
-$("factory").onchange = () => { const v = $("factory").value; if (v === "") return; const s = DATA.sounds[+v]; loadSound(s.name, s.tones, s.patch); say(`${s.name} (${DATA.categories[s.cat]})`); };
+$("factory").onchange = () => { const v = $("factory").value; if (v === "") return; const s = DATA.sounds[+v]; loadSound(s.name, s.tones, s.patch, -1, +v); say(`${s.name} (${DATA.categories[s.cat]})`); };
+// ◀ ▶: the previous or next sound in the menu as shown (grouped by category); from a slot or a file, the first or last
 const stepSound = (d) => {
-  const cur = DATA.sounds.findIndex((s) => s.name === S.name);
-  const i = ((cur < 0 ? (d > 0 ? -1 : 0) : cur) + d + NSOUND) % NSOUND;
-  $("factory").value = String(i); $("factory").onchange();
+  const n = FACTORY_ORDER.length, v = $("factory").value;
+  const pos = v === "" ? (d > 0 ? -1 : 0) : FACTORY_ORDER.indexOf(+v);
+  $("factory").value = String(FACTORY_ORDER[(pos + d + n) % n]);
+  $("factory").onchange();
 };
 $("prevSound").onclick = () => stepSound(-1);
 $("nextSound").onclick = () => stepSound(1);
@@ -1021,10 +1030,12 @@ $("nextSound").onclick = () => stepSound(1);
   if (saved && validPatch(saved.patch) && validTones(saved.tones)) {
     S.patch = Uint8Array.from(saved.patch); S.tones = saved.tones; S.name = saved.name || "SOUND";
     S.base = Uint8Array.from(validPatch(saved.base) ? saved.base : saved.patch); S.curSlot = saved.slot ?? -1;
+    S.factory = Number.isInteger(saved.factory) && saved.factory < NSOUND ? saved.factory : -1;
   }
   const slots = store.get("slots");
   if (Array.isArray(slots)) for (let i = 0; i < NUSER; i++) { const s = slots[i]; S.slots[i] = s && validPatch(s.patch) && validTones(s.tones) ? s : null; }
   drawAll();
+  $("factory").value = S.factory >= 0 ? String(S.factory) : "";
   fitAll();
   if (document.fonts) document.fonts.ready.then(fitAll);
   if (!WASM_B64 || WASM_B64.startsWith("/*")) $("audio").disabled = true;
