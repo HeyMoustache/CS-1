@@ -8,6 +8,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CS-1 Programmer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
 <meta name="description" content="A Yamaha CS-80 style editor for the CS-1 firmware on the M-VAVE FM-1.">
 <style>
 :root {
@@ -20,7 +22,7 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body { background: #121110; color: var(--silk); font: 13px/1.35 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: .02em; }
+body { background: #121110; color: var(--silk); font: 13px/1.35 "Barlow Semi Condensed", "Arial Narrow", "Segoe UI", Roboto, Arial, sans-serif; letter-spacing: .02em; }
 button, select, input { font: inherit; color: inherit; }
 .case { max-width: 1480px; margin: 0 auto; padding: 14px 0 24px; display: grid; grid-template-columns: 18px 1fr 18px; }
 .wood { border-radius: 6px; background:
@@ -57,8 +59,8 @@ select.btn { padding-right: 6px; }
 .sec h3 { margin: 0 0 6px; font-size: 10px; font-weight: 400; letter-spacing: .28em; color: var(--silk); display: flex; align-items: center; gap: 6px; }
 .sec h3::before, .sec h3::after { content: ""; height: 1px; background: var(--rule); flex: 1; min-width: 6px; }
 .knobs { display: flex; gap: 4px; }
-.sl { width: 40px; display: flex; flex-direction: column; align-items: center; user-select: none; -webkit-user-select: none; touch-action: none; }
-.sl .leg { font-size: 8px; color: var(--legend); height: 11px; white-space: nowrap; overflow: hidden; max-width: 40px; }
+.sl { width: 42px; display: flex; flex-direction: column; align-items: center; user-select: none; -webkit-user-select: none; touch-action: none; }
+.sl .leg { font-size: 9px; color: var(--legend); height: 12px; line-height: 12px; white-space: nowrap; overflow: hidden; width: 42px; text-align: center; }
 .sl .track { position: relative; width: 26px; height: 118px; margin: 2px 0; cursor: ns-resize; outline: none; border-radius: 3px; }
 .sl .track:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
 .sl .track::before { content: ""; position: absolute; left: 50%; top: 4px; bottom: 4px; width: 6px; margin-left: -3px; background: var(--slot); border-radius: 3px; box-shadow: inset 0 1px 2px #000; }
@@ -66,15 +68,15 @@ select.btn { padding-right: 6px; }
 .sl .cap { position: absolute; left: 0; width: 26px; height: 14px; margin-top: -7px; border-radius: 2px; background: var(--c, var(--cap-white));
   box-shadow: 0 2px 2px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.35); }
 .sl .cap::after { content: ""; position: absolute; left: 2px; right: 2px; top: 6px; height: 2px; background: rgba(0,0,0,.45); }
-.sl .val { font-size: 11px; font-variant-numeric: tabular-nums; height: 15px; color: var(--silk); white-space: nowrap; }
-.sl .nm { font-size: 9px; letter-spacing: .06em; white-space: nowrap; color: var(--silk); }
+.sl .val { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; height: 16px; line-height: 16px; color: var(--silk); white-space: nowrap; overflow: hidden; width: 42px; text-align: center; }
+.sl .nm { font-size: 10px; font-weight: 600; letter-spacing: .03em; white-space: nowrap; overflow: hidden; width: 42px; text-align: center; color: var(--silk); }
 .sl.changed .val { color: var(--accent); }
 canvas.env { width: 120px; height: 40px; margin-top: 6px; background: var(--slot); border-radius: 3px; align-self: center; }
 
 /* ---- tone buttons */
 .tones { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 10px 0 0 52px; }
 .tone-row { display: flex; gap: 4px; flex-wrap: wrap; }
-.tbtn { width: 46px; height: 30px; border-radius: 3px; border: 0; cursor: pointer; font-size: 8px; letter-spacing: .04em; line-height: 1.05; padding: 2px; color: #1a1612; background: var(--tc); opacity: .55; box-shadow: inset 0 -3px 0 rgba(0,0,0,.25); position: relative; }
+.tbtn { width: 52px; height: 32px; border-radius: 3px; border: 0; cursor: pointer; font-size: 10px; font-weight: 700; letter-spacing: .02em; line-height: 1.05; padding: 2px 3px; overflow: hidden; overflow-wrap: anywhere; color: #1a1612; background: var(--tc); opacity: .55; box-shadow: inset 0 -3px 0 rgba(0,0,0,.25); position: relative; }
 .tbtn.c3, .tbtn.c1 { color: #f4f0e6; }
 .tbtn.lit { opacity: 1; box-shadow: 0 0 10px var(--tc), inset 0 -3px 0 rgba(0,0,0,.25); }
 .tbtn.lit::after { content: ""; position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 4px #fff; }
@@ -98,14 +100,14 @@ canvas.env { width: 120px; height: 40px; margin-top: 6px; background: var(--slot
 .lib { padding-top: 16px; }
 .lib-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 10px; }
 .lib-head h2 { margin: 0; font-size: 11px; letter-spacing: .3em; font-weight: 400; }
-.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
-.slot { background: var(--panel-2); border: 1px solid var(--btn-line); border-radius: 4px; padding: 6px 7px; display: grid; grid-template-columns: 30px 1fr; gap: 2px 6px; align-items: center; cursor: pointer; min-height: 54px; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
+.slot { background: var(--panel-2); border: 1px solid var(--btn-line); border-radius: 4px; padding: 6px 7px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 6px; align-items: center; cursor: pointer; min-height: 56px; overflow: hidden; }
 .slot:hover { border-color: var(--accent); }
 .slot.cur { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .slot .no { font-size: 11px; color: var(--legend); grid-row: span 2; font-variant-numeric: tabular-nums; }
 .slot .sn { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .slot.empty .sn { color: #5c5753; }
-.slot .acts { display: flex; gap: 4px; }
+.slot .acts { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .slot .acts button { font-size: 10px; padding: 2px 6px; }
 .note { font-size: 11px; color: var(--legend); margin-top: 8px; }
 .drop { outline: 2px dashed var(--accent); outline-offset: 4px; }
@@ -125,7 +127,7 @@ dialog select { width: 100%; }
   .play { grid-template-columns: 1fr; }
   .chan-label { width: 100%; flex-direction: row; justify-content: flex-start; }
   .chan-label span { writing-mode: horizontal-tb; transform: none; }
-  .sl { width: 36px; } .sl .track { height: 100px; }
+  .sl, .sl .leg, .sl .val, .sl .nm { width: 38px; } .sl .track { height: 100px; }
 }
 </style>
 </head>
@@ -340,11 +342,26 @@ function makeSlider(k, off, label) {
   sliders.push(s);
   return el;
 }
+// a label wider than its box (a wide fallback font, a long value name) is shrunk until it fits
+function fit(el, max) {
+  el.style.fontSize = "";
+  let px = max || parseFloat(getComputedStyle(el).fontSize);
+  while (el.scrollWidth > el.clientWidth + 0.5 && px > 6) { px -= 0.5; el.style.fontSize = px + "px"; }
+}
+function fitAll() {
+  for (const s of sliders) { s.el.querySelectorAll(".leg, .nm").forEach((e) => fit(e)); fit(s.val); }
+  document.querySelectorAll(".tbtn").forEach((b) => {
+    b.style.fontSize = "";
+    let px = parseFloat(getComputedStyle(b).fontSize);
+    while ((b.scrollHeight > b.clientHeight + 0.5 || b.scrollWidth > b.clientWidth + 0.5) && px > 6) { px -= 0.5; b.style.fontSize = px + "px"; }
+  });
+}
 function drawSlider(s) {
   const v = S.patch[s.off];
   const t = s.k.max ? v / s.k.max : 0;
   s.cap.style.top = `calc(7px + ${(1 - t).toFixed(4)} * (100% - 14px))`;
-  s.val.textContent = shown(s.k, v);
+  const txt = shown(s.k, v);
+  if (s.val.textContent !== txt) { s.val.textContent = txt; if (DATA.values[s.k.kind]) fit(s.val); }
   s.track.setAttribute("aria-valuenow", v);
   s.track.setAttribute("aria-valuetext", shown(s.k, v));
   s.el.classList.toggle("changed", v !== S.base[s.off]);
@@ -1008,6 +1025,8 @@ $("nextSound").onclick = () => stepSound(1);
   const slots = store.get("slots");
   if (Array.isArray(slots)) for (let i = 0; i < NUSER; i++) { const s = slots[i]; S.slots[i] = s && validPatch(s.patch) && validTones(s.tones) ? s : null; }
   drawAll();
+  fitAll();
+  if (document.fonts) document.fonts.ready.then(fitAll);
   if (!WASM_B64 || WASM_B64.startsWith("/*")) $("audio").disabled = true;
   say("Click “Browser sound” to hear it here, or “Connect FM-1” to program the FM-1.");
 })();
