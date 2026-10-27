@@ -81,7 +81,8 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     errors = []
     pg.on("pageerror", lambda e: errors.append(str(e)))
-    pg.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    # (the web font may be out of reach where the test runs: the page falls back to Arial Narrow / Arial)
+    pg.on("console", lambda m: errors.append(m.text) if m.type == "error" and "fonts.g" not in (m.location or {}).get("url", "") else None)
     pg.goto("file://" + PAGE)
     pg.wait_for_timeout(400)
     check("the page loads without script errors", not errors)
