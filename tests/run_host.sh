@@ -14,6 +14,9 @@ build/host/audio_worker_thread_test
 $CC -O2 -Wall -Wno-unused-function -o build/host/sense_test tests/sense_test.c
 build/host/sense_test
 build/host/cs1 build/host/cs1
+python3 -I tests/editor_test.py build/host/cs1        # the editor link's SysEx
+$CC -O1 -Wall -Wno-unused-function -Itests/stub_hal -Ifirmware/src -o build/host/trs_sysex_test tests/trs_sysex_test.c
+build/host/trs_sysex_test
 python3 - <<'PYEOF'
 from pathlib import Path
 from PIL import Image

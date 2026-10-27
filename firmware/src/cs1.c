@@ -1016,6 +1016,8 @@ static void say(const char *m)
     tones_drawn = ~0u;
 }
 
+#include "cs1_editor.h"                               /* the browser editor's SysEx: the panel and the user presets */
+
 static void app_init(void)
 {
     if (settings_load(&set, sizeof set) || set.magic != SET_MAGIC || set.oct_plus2 > 4u || set.chan > 1u) {
@@ -1309,6 +1311,7 @@ static void app_loop(void)
             midi_redraw |= 15u;                         /* redrawn once after the drain, not per CC (a turned knob is a stream) */
         }
     }
+    editor_service();                                  /* SysEx from the editor (USB or TRS): before the redraw below */
     if (page == PG_MIDI && fm1_ms - midi_stat_ms > 500u) {   /* the TRS input's health: bytes lost in the ring, messages lost in the queue */
         uint32_t d = midi_in_drops();
         midi_stat_ms = fm1_ms;

@@ -75,6 +75,31 @@ EXPORT uint32_t web_midi(uint32_t st, uint32_t d1, uint32_t d2)
     if (st < 0x80u || (st >= 0xF0u && st != 0xF8u && st != 0xFAu && st != 0xFBu && st != 0xFCu)) return 1;
     return (uint32_t)fake_midi_put(st, d1, d2);
 }
+/* the editor link's SysEx: the page writes a frame (F0 .. F7) into web_sysex_buf and calls web_sysex(n): 0 = the
+ * queue was full (try again after some audio); the replies come out of web_sysex_out_take (the frame's length,
+ * its bytes in web_sysex_out_buf; 0 = none) */
+static uint8_t sx_in_buf[640];
+static uint8_t sx_out[8][256];
+static uint32_t sx_out_len[8], sx_out_w, sx_out_r;
+static uint8_t sx_out_buf[256];
+static int sysex_send(const uint8_t *p, uint32_t n)
+{
+    if (n > 256u || sx_out_w - sx_out_r >= 8u) return -1;
+    memcpy(sx_out[sx_out_w % 8u], p, n);
+    sx_out_len[sx_out_w++ % 8u] = n;
+    return 0;
+}
+EXPORT uint8_t *web_sysex_buf(void) { return sx_in_buf; }
+EXPORT uint32_t web_sysex(uint32_t n) { return (uint32_t)fake_sysex_put(sx_in_buf, n > sizeof sx_in_buf ? sizeof sx_in_buf : n); }
+EXPORT uint8_t *web_sysex_out_buf(void) { return sx_out_buf; }
+EXPORT uint32_t web_sysex_out_take(void)
+{
+    uint32_t n;
+    if (sx_out_r == sx_out_w) return 0;
+    n = sx_out_len[sx_out_r % 8u];
+    memcpy(sx_out_buf, sx_out[sx_out_r++ % 8u], n);
+    return n;
+}
 /* MIDI out: the next message as st | d1 << 8 | d2 << 16 | 1 << 24, 0 when there is none */
 EXPORT uint32_t web_midi_out_take(void) { return mo_r == mo_w ? 0u : mo_ring[mo_r++ % 64u]; }
 

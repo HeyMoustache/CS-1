@@ -124,6 +124,32 @@ static int midi_get(uint8_t *st, uint8_t *d1, uint8_t *d2)
     return 1;
 }
 
+/* ---- the app's SysEx (the editor link): frames whoever drives the fake puts in (fake_sysex_put: F0 .. F7 or the
+ * bytes between), kept as the device keeps them: only frames starting 7D, a few at a time, until sysex_done */
+#define FAKE_SXQ 8u
+static uint8_t fake_sx[FAKE_SXQ][640];
+static uint32_t fake_sx_len[FAKE_SXQ], fake_sx_w, fake_sx_r;
+static int fake_sysex_put(const uint8_t *p, uint32_t n)
+{
+    if (n && p[0] == 0xF0u) { p++; n--; }
+    if (n && p[n - 1u] == 0xF7u) n--;
+    if (!n || n > 640u || p[0] != 0x7Du) return 1;  /* not the app's: the device would drop it too */
+    if (fake_sx_w - fake_sx_r >= FAKE_SXQ) return 0;
+    memcpy(fake_sx[fake_sx_w % FAKE_SXQ], p, n);
+    fake_sx_len[fake_sx_w % FAKE_SXQ] = n;
+    fake_sx_w++;
+    return 1;
+}
+static int sysex_get(const uint8_t **p, uint32_t *n)
+{
+    if (fake_sx_r == fake_sx_w) return 0;
+    *p = fake_sx[fake_sx_r % FAKE_SXQ];
+    *n = fake_sx_len[fake_sx_r % FAKE_SXQ];
+    return 1;
+}
+static void sysex_done(void) { if (fake_sx_r != fake_sx_w) fake_sx_r++; }
+static int sysex_send(const uint8_t *p, uint32_t n);   /* the driver's: host.c prints, the page reads a ring */
+
 /* ---- settings: a 256-byte blob in RAM; the driver keeps it (host: for the run; the page: in the browser) */
 static uint8_t fake_store[4 + 256];             /* [0] = 1 when saved, [1..3] = length, then the bytes */
 static uint32_t fake_saves;

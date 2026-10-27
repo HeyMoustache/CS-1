@@ -14,11 +14,22 @@
 #include <stdlib.h>
 
 static void midi_send(uint32_t st, uint32_t d1, uint32_t d2) { printf("%6u ms  MIDI out %02X %u %u\n", fm1_ms, st, d1, d2); }
+static int sysex_send(const uint8_t *p, uint32_t n)     /* the editor link's replies: printed in hex */
+{
+    uint32_t i;
+    printf("%6u ms  SysEx out", fm1_ms);
+    for (i = 0; i < n; i++) printf(" %02X", p[i]);
+    printf("\n");
+    return 0;
+}
 
 /* the script: at t ms, keys down (bit k = key k, 0 = F3), a button edge, a MIDI message. A script file (the second
  * argument) replaces it, a line each: "T keys MASK" (hex or decimal), "T btn ID", "T midi ST D1 D2", "T enc ID N",
+ * "T sysex F0 7D .. F7" (hex bytes),
  * "T end" */
-typedef struct { uint32_t t, keys; int btn; int enc, n; uint8_t st, d1, d2; } host_ev_t;
+typedef struct { uint32_t t, keys; int btn; int enc, n; uint8_t st, d1, d2; int sx; } host_ev_t;   /* sx: 1 + a frame in sx_pool, 0 none */
+static uint8_t sx_pool[256][640];
+static uint32_t sx_pool_len[256], sx_pool_n;
 static const host_ev_t SCRIPT0[] = {
     {200, 1u << 7, -1, -1, 0, 0, 0, 0},                                /* C4 */
     {700, 1u << 7 | 1u << 11 | 1u << 14, -1, -1, 0, 0, 0, 0},          /* + E4 G4: a chord */
@@ -36,18 +47,26 @@ static const uint32_t SHOT[] = {1000, 3000};
 static void read_script(const char *path)
 {
     static host_ev_t ev[4096];
-    char line[256], what[16];
+    char line[4096], what[16];
     FILE *f = fopen(path, "r");
     uint32_t n = 0;
     if (!f) { perror(path); exit(1); }
     while (fgets(line, sizeof line, f) && n < 4096u) {
-        host_ev_t e = {0, 0, -1, -1, 0, 0, 0, 0};
+        host_ev_t e = {0, 0, -1, -1, 0, 0, 0, 0, 0};
         unsigned a = 0, b = 0, c = 0;
         if (line[0] == '#' || sscanf(line, "%u %15s", &e.t, what) != 2) continue;
         if (!strcmp(what, "end")) { end_ms = e.t; continue; }
         if (!strcmp(what, "keys")) { sscanf(line, "%*u %*s %i", (int *)&e.keys); }
         else if (!strcmp(what, "btn")) { sscanf(line, "%*u %*s %d", &e.btn); }
         else if (!strcmp(what, "enc")) { sscanf(line, "%*u %*s %d %d", &e.enc, &e.n); }
+        else if (!strcmp(what, "sysex") && sx_pool_n < 256u) {
+            char *q = strstr(line, "sysex") + 5;
+            unsigned v; int used;
+            uint32_t k = 0;
+            while (k < 640u && sscanf(q, "%x%n", &v, &used) == 1) { sx_pool[sx_pool_n][k++] = (uint8_t)v; q += used; }
+            sx_pool_len[sx_pool_n] = k;
+            e.sx = (int)++sx_pool_n;
+        }
         else if (!strcmp(what, "midi")) { sscanf(line, "%*u %*s %i %u %u", (int *)&a, &b, &c); e.st = (uint8_t)a; e.d1 = (uint8_t)b; e.d2 = (uint8_t)c; }
         else continue;
         ev[n++] = e;
@@ -107,7 +126,8 @@ static void platform_poll(void)                 /* one call = one millisecond */
     fm1_ms++;
     while (step < script_n && script[step].t <= fm1_ms) {
         const host_ev_t *e = &script[step];
-        if (e->st) fake_midi_put(e->st, e->d1, e->d2);
+        if (e->sx) { if (!fake_sysex_put(sx_pool[e->sx - 1], sx_pool_len[e->sx - 1])) printf("%6u ms  SysEx in: queue full\n", fm1_ms); }
+        else if (e->st) fake_midi_put(e->st, e->d1, e->d2);
         else if (e->btn >= 0) { fake_buttons(1u << e->btn); fake_buttons(0); }
         else if (e->enc >= 0) fake_enc[e->enc % 7] += e->n;
         else fake_keys(e->keys);

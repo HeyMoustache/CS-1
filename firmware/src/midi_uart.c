@@ -16,6 +16,14 @@ static struct {
     uint8_t st, need, got, d0, sysex;
 } um;
 
+/* SysEx on the jack (CS-1: the editor link): one frame between F0 and F7 kept for the main loop (platform.c's
+ * app_sx_route); the next one is collected only once that one is taken. Realtime bytes may come between. */
+static uint8_t um_sx[640];
+static volatile uint32_t um_sx_len;
+static volatile uint8_t um_sx_ready;
+static uint32_t um_sx_pos;
+static uint8_t um_sx_on;
+
 static void uart_midi_init(void)                   /* before timer5_start(): PORTH RMW */
 {
     fm1_uart1_midi_init(um_ring, UM_RING);
@@ -42,13 +50,27 @@ static void um_byte(uint32_t b)
         return;                                    /* realtime keeps running status */
     }
     if (b & 0x80u) {
+        if (b == 0xF7u && um.sysex && um_sx_on && um_sx_pos) {   /* a whole frame: the main loop's */
+            um_sx_len = um_sx_pos;
+            RING_PUBLISH();
+            um_sx_ready = 1;
+        }
+        um_sx_on = b == 0xF0u && !um_sx_ready;
+        um_sx_pos = 0;
         um.sysex = b == 0xF0u;
         um.st = b < 0xF0u ? (uint8_t)b : 0;        /* system common/SysEx cancel running status */
         um.need = (uint8_t)um_len(b);
         um.got = 0;
         return;
     }
-    if (um.sysex || !um.st)
+    if (um.sysex) {
+        if (um_sx_on) {
+            if (um_sx_pos < sizeof um_sx) um_sx[um_sx_pos++] = (uint8_t)b;
+            else um_sx_on = 0;                     /* too long: not ours */
+        }
+        return;
+    }
+    if (!um.st)
         return;
     if (um.need == 2u && !um.got) {
         um.d0 = (uint8_t)b;
@@ -78,6 +100,7 @@ static void uart_midi_take(uint32_t n)
         um.rd = (um.rd + um.pend - UM_RING) & (UM_RING - 1u);
         um.pend = UM_RING;
         um.st = um.got = um.sysex = 0;              /* lost bytes: wait for a complete new status */
+        um_sx_on = 0;
     }
     while (um.pend) {
         um_byte(um_ring[um.rd]);

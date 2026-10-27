@@ -8,6 +8,7 @@
  *   USB rescue          OCT- held at power-on: no audio, only the updater (the web installer still works)
  *   updater             the M-UPGRADE SysEx path: the web installer / the hub can always reach the FM-1
  *   USB-MIDI            in and out (midi_get, midi_send); TRS MIDI in lands in the same queue
+ *   app SysEx           frames starting 7D (the non-commercial ID), from USB or TRS: sysex_get / sysex_done; sysex_send
  *   second core         audio_worker_submit / audio_worker_join: a render job on CPU1 (DINGHY_DUAL_CORE)
  *   USB audio           the output as a class-compliant 16-bit stereo input, 44.1 or 48 kHz
  *   keys, knobs, LEDs   fm1_in.notes / buttons, fm1_input_edges, fm1_enc_take, fm1_led_key (hal/fm1_input.h)
@@ -349,6 +350,53 @@ void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) 
 }
 extern void isr_alnk0(void);
 
+/* ---- the app's SysEx (CS-1: the editor link): a frame whose first byte is 0x7D (the non-commercial ID; the
+ * updater's start 00 or 22), from USB (the updater's frame buffer, taken before ota_service would drop it) or the TRS
+ * jack (midi_uart.c), kept here one at a time until the app is done with it. Replies go out on USB (the jack is in only). */
+#define APP_SX_ID 0x7Du
+static uint8_t app_sx[640];
+static uint32_t app_sx_len;
+static uint8_t app_sx_full;
+static void app_sx_route(void)                  /* main loop, before ota_service */
+{
+    const uint8_t *p;
+    uint32_t n;
+    if (app_sx_full)
+        return;
+    if (ota_frame_get(&p, &n) && n && n <= sizeof app_sx && p[0] == APP_SX_ID) {
+        memcpy(app_sx, p, n);
+        app_sx_len = n;
+        app_sx_full = 1;
+        ota_frame_done();
+        return;
+    }
+#if FELUCCA_UART
+    if (um_sx_ready) {
+        RING_PUBLISH();                         /* read the frame only after the flag */
+        n = um_sx_len;
+        if (n && n <= sizeof app_sx && um_sx[0] == APP_SX_ID) {
+            memcpy(app_sx, um_sx, n);
+            app_sx_len = n;
+            app_sx_full = 1;
+        }
+        RING_PUBLISH();
+        um_sx_ready = 0;                        /* the jack may collect the next one */
+    }
+#endif
+}
+static int sysex_get(const uint8_t **p, uint32_t *n)   /* 1: the next frame (the bytes between F0 and F7, 7D first) */
+{
+    if (!app_sx_full)
+        app_sx_route();                         /* (a second frame in the same pass) */
+    if (!app_sx_full)
+        return 0;
+    *p = app_sx;
+    *n = app_sx_len;
+    return 1;
+}
+static void sysex_done(void) { app_sx_full = 0; }
+static int sysex_send(const uint8_t *p, uint32_t n) { return usb.config ? ota_wire_send(p, n) : -1; }   /* a whole frame, F0 .. F7 (main loop) */
+
 /* ---- the main loop's duties: watchdog, USB, the installer's update request, the MASTER knob */
 static void platform_poll(void)
 {
@@ -356,6 +404,7 @@ static void platform_poll(void)
     int32_t a;
     fm1_wdt_feed();
     usb_retry(fm1_ms);
+    app_sx_route();                             /* the app's SysEx first: ota_service drops what is not the updater's */
     ota_service();
     if (usb.ota_req) {
         usb.ota_req = 0;
